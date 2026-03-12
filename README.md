@@ -64,7 +64,7 @@ The project is planned as a **monorepo**.
 ### Monorepo structure
 
 ```text
-/
+core/
   apps/
     web/
     api/
@@ -200,7 +200,7 @@ pnpm -v
 If the repo pins pnpm in `package.json`, make sure the version is a full semver version, for example:
 
 ```json
-"packageManager": "pnpm@10.11.0"
+"packageManager": "pnpm@10.32.1"
 ```
 
 and **not**:
