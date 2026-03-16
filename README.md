@@ -1,5 +1,7 @@
 # DETI Maker Lab — Development Setup Guide
 
+>To be reviewed, might not be consistent in 100% with actual steps.
+
 This document explains how to set up the local development environment, run the project, and stop everything at the end of the day.
 
 > Recommended setup for Windows contributors: **Windows + WSL2 (Ubuntu) + Docker Desktop + VS Code + Android Studio**.
@@ -341,7 +343,7 @@ If the backend also has development-only dependencies, install them as well:
 ```bash
 cd apps/api
 source .venv/bin/activate
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 cd ../..
 ```
 
@@ -371,6 +373,12 @@ docker ps
 ---
 
 ## 10. Run the project locally
+
+### Run the project - parallel run of backend and frontend
+```bash
+pnpm dev
+```
+From now on, backend should be accessed under `127.0.0.1:8000` and frontend under `localhost:3000`.
 
 Open **separate terminals** in WSL.
 
