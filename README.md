@@ -1,95 +1,117 @@
-# Development Setup and Daily Workflow
+# DETI Maker Lab — Development Setup Guide
 
-This document explains how to set up the development environment, run the project locally, and shut everything down when you finish working.
+This document explains how to set up the local development environment, run the project, and stop everything at the end of the day.
 
-## Purpose of the project
-
-This system is being built for DETI Maker Lab. The main goals are:
-
-- manage projects, groups, and equipment requisitions in one system
-- integrate with **Snipe-IT** as the inventory authority
-- support the requisition lifecycle:
-  - request
-  - approve / reject
-  - assign
-  - return
-- replace the old Markdown-style project creation with structured forms
-- integrate with the university authentication system
-- preserve and extend the existing installed base instead of rewriting everything from scratch
-- support web and mobile usage
+> Recommended setup for Windows contributors: **Windows + WSL2 (Ubuntu) + Docker Desktop + VS Code + Android Studio**.
+>
+> We keep the repository inside the **WSL filesystem** and run the backend/web/tooling from Linux. This gives a smoother developer experience than mixing native Windows tooling with Linux-oriented project scripts.
 
 ---
 
-## Recommended development setup
+## 1. Project scope and architecture
 
-The recommended setup for contributors using Windows is:
+This project replaces the most painful parts of the current wiki-based Maker Lab workflow while preserving the existing installed base.
 
-- **Windows 11**
-- **WSL2 with Ubuntu**
-- **VS Code with Remote - WSL**
-- **Docker Desktop with WSL integration enabled**
-- **Node.js LTS inside WSL**
-- **pnpm** as the package manager
-- **Android Studio** for Android development
+The core goals are:
 
-Why this setup?
+- integrate with **Snipe-IT** as the authoritative inventory system,
+- support the full requisition lifecycle: **request → approve/reject → assign → return**,
+- allow **multiple requisitions during the same project lifecycle**,
+- replace Markdown-based project creation with **structured forms**,
+- integrate authentication with the university **SSO / universal user**,
+- support both **web** and **mobile** clients.
 
-- it gives a Linux-like environment for backend and web development
-- it works well with Docker
-- it avoids many native Windows path and tooling issues
-- it is the most practical setup for a monorepo with web, API, migration, and mobile apps
-
-> Important: keep the repository inside the Linux filesystem in WSL (for example `~/dev/...`) and **not** under `C:\...`.
-
----
-
-## Planned tech stack
-
-The project is planned as a **monorepo**.
-
-### Main technologies
-
-- **TypeScript**
-- **pnpm workspaces**
-- **Turborepo**
-- **Next.js** for the web application
-- **NestJS** for the backend API
-- **React Native + Expo** for the mobile app
-- **PostgreSQL** for the main application database
-- **Docker Compose** for local infrastructure
-- **Prisma** for database access
-- **Snipe-IT** integration for inventory
-- **University SSO** integration for authentication
-
-### Monorepo structure
+### Proposed monorepo structure
 
 ```text
-core/
-  apps/
-    web/
-    api/
-    mobile/
-    migration/
-  packages/
-    shared-types/
-    ui/
-    config/
-    auth/
-    snipeit-client/
-    legacy-wiki/
-  infra/
-    docker/
-    db/
-    nginx/
-    scripts/
-  docs/
+.
+├── apps/
+│   ├── web/          # Next.js web app
+│   ├── mobile/       # Expo / React Native mobile app
+│   ├── api/          # FastAPI backend
+│   └── migration/    # legacy wiki import / migration scripts
+├── packages/
+│   ├── shared-types/ # TS shared contracts for web/mobile
+│   ├── ui/           # shared UI components
+│   ├── config/       # shared configuration helpers
+│   ├── auth/         # auth helpers for OIDC / SSO integration
+│   ├── snipeit-client/
+│   └── legacy-wiki/
+├── infra/
+│   ├── docker/
+│   ├── db/
+│   ├── nginx/
+│   └── scripts/
+├── docs/
+└── README.md
 ```
 
 ---
 
-## One-time setup on Windows
+## 2. Technologies used
 
-## 1. Install WSL2 and Ubuntu
+### Frontend
+- **Next.js** + **TypeScript** for the web application
+- **Tailwind CSS** for styling
+- **pnpm** for JavaScript/TypeScript package management
+- **Turborepo** for monorepo task orchestration
+
+### Mobile
+- **Expo** + **React Native** for Android and iOS mobile development
+- Android is developed locally on Windows using **Android Studio**
+- iOS cannot be simulated locally on Windows; use a physical device or cloud builds when needed
+
+### Backend
+- **FastAPI** for the backend API
+- **Python 3.12** with **pip** and **venv**
+- **SQLAlchemy** for ORM / DB access
+- **Alembic** for database migrations
+- **Pydantic** for validation and schemas
+
+### Database and infra
+- **PostgreSQL** for application data
+- **Docker Desktop** + **Docker Compose** for local services
+- **Nginx** later for reverse proxying in deployment environments
+
+### Integrations
+- **Snipe-IT** as the inventory authority
+- University **SSO / OIDC** as the preferred authentication path
+- Legacy **Maker Lab Wiki** as a migration source
+
+### Developer workflow
+- **WSL2 Ubuntu** as the main development environment on Windows
+- **VS Code Remote - WSL** for editing the codebase
+- **GitHub** for code review and collaboration
+
+---
+
+## 3. Recommended local setup on Windows
+
+### What should be installed on Windows
+
+Install these tools directly on Windows:
+
+1. **WSL2 with Ubuntu**
+2. **Docker Desktop**
+3. **VS Code**
+4. **Android Studio**
+
+### What should run inside WSL Ubuntu
+
+Inside WSL Ubuntu we install and use:
+
+- Git
+- Node.js LTS
+- pnpm
+- Python 3.12, pip, and venv
+- project dependencies
+- backend, web, and migration commands
+
+---
+
+## 4. First-time environment setup
+
+### 4.1 Install WSL2 and Ubuntu
 
 Open **PowerShell as Administrator** and run:
 
@@ -99,57 +121,61 @@ wsl --update
 wsl -l -v
 ```
 
-Restart Windows if needed.
+Restart the computer if Windows asks for it.
 
-Then open Ubuntu and create your Linux username and password.
-
----
-
-## 2. Install Docker Desktop
-
-Install **Docker Desktop for Windows**.
-
-After installation, open Docker Desktop and make sure:
-
-- **Use WSL 2 based engine** is enabled
-- **WSL integration** is enabled for your Ubuntu distribution
+When Ubuntu starts for the first time, create your Linux username and password.
 
 ---
 
-## 3. Install VS Code
+### 4.2 Install Docker Desktop on Windows
 
-Install **Visual Studio Code** on Windows.
+Install Docker Desktop and then enable:
 
-Recommended extensions:
+- **Use WSL 2 based engine**
+- **WSL integration** for your Ubuntu distro
 
-- Remote - WSL
-- ESLint
-- Prettier
-- Docker
-- Prisma
-- GitLens
+After that, open Ubuntu and verify Docker works from WSL:
+
+```bash
+docker version
+docker compose version
+```
 
 ---
 
-## 4. Install Android Studio
+### 4.3 Install VS Code and the WSL extension
 
-Install **Android Studio** on Windows.
+Install:
 
-During setup, install:
+- **Visual Studio Code**
+- **Remote - WSL** extension
+
+Later, when you are inside the repo in Ubuntu, you will open it with:
+
+```bash
+code .
+```
+
+---
+
+### 4.4 Install Android Studio on Windows
+
+Install Android Studio on Windows and let the setup wizard install:
 
 - Android SDK
 - Android SDK Platform-Tools
 - Android Emulator
-- at least one recent Android device image
+- at least one recent Android system image
 
-> On Windows, Android development is fine locally.  
-> iOS Simulator is **not available on Windows**. For iOS, use a physical device or cloud builds.
+For daily work, Android Studio stays on Windows, but the repository remains inside WSL.
+
+> On Windows, Android development is local. For iOS, use a physical device or cloud build flow.
 
 ---
 
-## 5. Open Ubuntu and install basic packages
+### 4.5 Install base packages inside WSL Ubuntu
 
-Inside Ubuntu:
+Open Ubuntu and run:
 
 ```bash
 sudo apt update && sudo apt upgrade -y
@@ -163,15 +189,27 @@ sudo apt install -y \
   zip \
   jq \
   ca-certificates \
+  gnupg \
+  lsb-release \
   file \
-  xz-utils
+  xz-utils \
+  python3 \
+  python3-pip \
+  python3-venv
+```
+
+Verify Python and pip:
+
+```bash
+python3 --version
+pip3 --version
 ```
 
 ---
 
-## 6. Install Node.js LTS with nvm
+### 4.6 Install Node.js LTS inside WSL
 
-Inside Ubuntu:
+We use Node only inside WSL for the monorepo tooling.
 
 ```bash
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
@@ -187,87 +225,81 @@ npm -v
 
 ---
 
-## 7. Enable pnpm with Corepack
-
-Inside Ubuntu:
+### 4.7 Install pnpm inside WSL
 
 ```bash
-npm install -g corepack@latest
-corepack enable pnpm
+npm install --global corepack@latest
+corepack enable
+corepack prepare pnpm@latest-10 --activate
+
 pnpm -v
-```
-
-If the repo pins pnpm in `package.json`, make sure the version is a full semver version, for example:
-
-```json
-"packageManager": "pnpm@10.32.1"
-```
-
-and **not**:
-
-```json
-"packageManager": "pnpm@10"
 ```
 
 ---
 
-## 8. Clone the repository inside WSL
+## 5. Clone the repository
 
-Create a Linux-side dev directory:
+Keep the repository in the **Linux filesystem**, not under `C:\`.
 
 ```bash
 mkdir -p ~/dev
 cd ~/dev
+git clone <YOUR_REPOSITORY_URL> deti-maker-lab
+cd deti-maker-lab
 ```
 
-Clone the repository there:
-
-```bash
-git clone <REPOSITORY_URL>
-cd <REPOSITORY_NAME>
-```
-
-If the monorepo root is inside a subfolder such as `core`, then enter it:
-
-```bash
-cd core
-```
-
----
-
-## 9. Open the repo in VS Code
-
-From inside WSL:
+Open it in VS Code:
 
 ```bash
 code .
 ```
 
-This opens the project in VS Code using the **Remote - WSL** environment.
+---
+
+## 6. Expected starter project structure
+
+The project is expected to look approximately like this:
+
+```text
+apps/
+  web/
+  mobile/
+  api/
+  migration/
+packages/
+  shared-types/
+  ui/
+  config/
+  auth/
+  snipeit-client/
+  legacy-wiki/
+infra/
+  docker/
+  db/
+  nginx/
+```
 
 ---
 
-## 10. Create environment files
+## 7. Environment variables
 
-Copy the example environment file if the project provides one:
+Create the local environment files from the examples provided in the repo.
 
-```bash
-cp .env.example .env
+Typical files:
+
+```text
+.env.example
+apps/web/.env.local
+apps/api/.env
+apps/mobile/.env
 ```
 
-If the backend has its own environment file:
-
-```bash
-cp apps/api/.env.example apps/api/.env
-```
-
-Typical variables may include:
+Typical values:
 
 ```env
 DATABASE_URL=postgresql://makerlab:makerlab@localhost:5432/makerlab
-
-NEXT_PUBLIC_API_URL=http://localhost:3001
-EXPO_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_API_URL=http://localhost:8000
+EXPO_PUBLIC_API_URL=http://localhost:8000
 
 SNIPEIT_BASE_URL=
 SNIPEIT_API_TOKEN=
@@ -277,411 +309,395 @@ OIDC_CLIENT_ID=
 OIDC_CLIENT_SECRET=
 ```
 
-At the beginning of development, these external integrations can stay empty if the project uses mocks or stubs.
+At the beginning of development, SSO and Snipe-IT values may be left empty if the repo contains mock adapters or local-only configuration.
 
 ---
 
-## 11. Install project dependencies
+## 8. Install project dependencies
 
-From the monorepo root:
+### JavaScript / TypeScript workspace
+
+From the repo root:
 
 ```bash
 pnpm install
 ```
 
+### Python backend
+
+From the backend directory:
+
+```bash
+cd apps/api
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+cd ../..
+```
+
+If the backend also has development-only dependencies, install them as well:
+
+```bash
+cd apps/api
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+cd ../..
+```
+
+> Activate the virtual environment every time you open a new terminal for backend work.
+
 ---
 
-## 12. Start local services
+## 9. Start local infrastructure
 
-If the repository contains a Compose file, start the infrastructure:
+The recommended local infrastructure is at least:
+
+- PostgreSQL
+- optional admin / support services later
+
+From the repo root:
 
 ```bash
 docker compose -f infra/docker/docker-compose.yml up -d
 ```
 
-This usually starts local services such as PostgreSQL.
-
-To verify:
+Check running containers:
 
 ```bash
-docker compose -f infra/docker/docker-compose.yml ps
+docker ps
 ```
 
 ---
 
-## 13. Start the apps
+## 10. Run the project locally
 
-From the monorepo root:
+Open **separate terminals** in WSL.
 
-```bash
-pnpm dev
-```
-
-If the repo uses Turborepo, this usually starts all apps that have a `dev` script.
-
-You can also run apps individually.
-
-### Web
+### Terminal 1 — web app
 
 ```bash
+cd ~/dev/deti-maker-lab
 pnpm --filter web dev
 ```
 
-### API
+Expected URL:
 
-```bash
-pnpm --filter api start:dev
+```text
+http://localhost:3000
 ```
 
-### Mobile
+### Terminal 2 — FastAPI backend
 
 ```bash
+cd ~/dev/deti-maker-lab/apps/api
+source .venv/bin/activate
+fastapi dev app/main.py --host 0.0.0.0 --port 8000
+```
+
+Expected URL:
+
+```text
+http://localhost:8000
+```
+
+Swagger docs:
+
+```text
+http://localhost:8000/docs
+```
+
+### Terminal 3 — mobile app
+
+```bash
+cd ~/dev/deti-maker-lab
 pnpm --filter mobile start
 ```
 
----
+Then:
 
-## First-time mobile note
+- press `a` for Android emulator, or
+- scan the QR code in Expo Go on a physical Android device
 
-For Android:
+### Terminal 4 — optional migration scripts
 
-- start Android Studio
-- start an emulator
-- then run the mobile app
-
-For iOS:
-
-- local iOS Simulator is not available on Windows
-- use a physical iPhone or a cloud build workflow
+```bash
+cd ~/dev/deti-maker-lab/apps/migration
+# run only when needed
+```
 
 ---
 
-## Daily workflow on Windows
+## 11. Database migrations
 
-This is the recommended everyday routine.
+If the backend uses Alembic, typical commands are:
 
-## Start of work
+```bash
+cd ~/dev/deti-maker-lab/apps/api
+source .venv/bin/activate
+alembic upgrade head
+```
 
-1. Start **Docker Desktop**
-2. Open **Windows Terminal**
+To create a new migration:
+
+```bash
+cd ~/dev/deti-maker-lab/apps/api
+source .venv/bin/activate
+alembic revision --autogenerate -m "describe_change"
+```
+
+---
+
+## 12. Daily workflow on Windows
+
+This is the recommended day-to-day workflow for contributors using Windows.
+
+### Start of work
+
+1. Start **Docker Desktop** on Windows.
+2. Open **Windows Terminal** or **PowerShell**.
 3. Enter Ubuntu:
 
 ```bash
 wsl
 ```
 
-4. Go to the repository:
+4. Go to the project:
 
 ```bash
-cd ~/dev/<REPOSITORY_NAME>
+cd ~/dev/deti-maker-lab
 ```
 
-If needed:
-
-```bash
-cd core
-```
-
-5. Open in VS Code:
+5. Open VS Code in WSL:
 
 ```bash
 code .
 ```
 
-6. Start local infrastructure:
+6. Start infrastructure:
 
 ```bash
 docker compose -f infra/docker/docker-compose.yml up -d
 ```
 
-7. Install dependencies only if needed:
-   - after pulling changes
-   - after switching branches
-   - after `package.json` changes
+7. Refresh dependencies only when needed:
 
 ```bash
 pnpm install
+cd apps/api && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && cd ../..
 ```
 
-8. Start development servers:
+8. Start the apps you need:
 
 ```bash
-pnpm dev
+pnpm --filter web dev
 ```
+
+```bash
+cd apps/api && source .venv/bin/activate && fastapi dev app/main.py --host 0.0.0.0 --port 8000
+```
+
+```bash
+pnpm --filter mobile start
+```
+
+### Typical daily routine
+
+- Use **web + api** for most feature work.
+- Run **mobile** only when you are actively testing the mobile app.
+- Run **migration scripts** only when working on legacy import tasks.
+- Keep Docker containers limited to what is necessary.
 
 ---
 
-## During development
+## 13. How to stop everything after work
 
-Useful commands:
+This section is important. At the end of the day, shut down local processes so they do not keep using CPU, RAM, battery, or disk resources.
 
-### Pull latest changes
+### 13.1 Stop application dev servers
 
-```bash
-git pull
-pnpm install
-```
-
-### Check containers
-
-```bash
-docker compose -f infra/docker/docker-compose.yml ps
-```
-
-### View logs
-
-```bash
-docker compose -f infra/docker/docker-compose.yml logs -f
-```
-
-### Run tests
-
-```bash
-pnpm test
-```
-
-### Run lint
-
-```bash
-pnpm lint
-```
-
-### Build everything
-
-```bash
-pnpm build
-```
-
----
-
-## End of work: how to stop everything
-
-When you finish working, do **not** leave development servers and containers running unnecessarily.
-
-## Step 1. Stop dev servers
-
-If `pnpm dev` is running in the terminal, press:
+In each terminal running a dev server, press:
 
 ```text
 Ctrl + C
 ```
 
-Do this for each terminal that is running a dev server.
+Do this for:
+
+- `pnpm --filter web dev`
+- `fastapi dev ...`
+- `pnpm --filter mobile start`
+
+If you launched the Android emulator, close it from Android Studio or the emulator window.
 
 ---
 
-## Step 2. Stop Docker containers
+### 13.2 Stop Docker containers
 
-If you want a quick stop and plan to resume soon:
+From the repo root:
+
+```bash
+docker compose -f infra/docker/docker-compose.yml down
+```
+
+This stops and removes the containers but **keeps the Docker volumes**, so your local database data is preserved.
+
+> Do **not** use `down -v` unless you intentionally want to delete local database data.
+
+If you only want a temporary pause and keep containers ready for a quick restart, you can use:
 
 ```bash
 docker compose -f infra/docker/docker-compose.yml stop
 ```
 
-This stops running containers but keeps them available to start again later.
+---
 
-If you want a cleaner shutdown after finishing work:
+### 13.3 Deactivate the Python virtual environment
+
+If your terminal is still inside the backend venv, run:
 
 ```bash
-docker compose -f infra/docker/docker-compose.yml down
+deactivate
 ```
 
-This stops and removes the containers and default networks created by Compose.
-
-> Use `down` at the end of the day if you do not need the services running anymore.
+This is optional, but it keeps the shell state clean.
 
 ---
 
-## Step 3. Shut down WSL
+### 13.4 Optional: stop WSL completely
 
-To release WSL resources from Windows, run this in **PowerShell** or **Command Prompt**:
+After all WSL terminals are closed, you can shut down WSL from Windows PowerShell:
 
 ```powershell
 wsl --shutdown
 ```
 
-This shuts down all running WSL distributions and the WSL virtual machine.
+This frees memory used by the Linux VM.
 
 ---
 
-## Step 4. Optionally quit Docker Desktop
+### 13.5 Optional: quit Docker Desktop
 
-If you want to free even more system resources, close Docker Desktop completely from Windows after the containers are stopped.
+If you are completely done for the day, you can also quit Docker Desktop from the Windows tray icon.
 
-This is recommended when you are done for the day.
-
----
-
-## Fast resume the next day
-
-If you used `docker compose stop`, you can resume with:
-
-```bash
-docker compose -f infra/docker/docker-compose.yml start
-```
-
-If you used `docker compose down`, resume with:
-
-```bash
-docker compose -f infra/docker/docker-compose.yml up -d
-```
-
-Then run:
-
-```bash
-pnpm dev
-```
+This is useful when you are not doing any more container work.
 
 ---
 
-## Common problems
+## 14. Useful commands reference
 
-## Invalid package manager specification in package.json
-
-If you see an error like:
-
-```text
-Invalid package manager specification in package.json (pnpm@10); expected a semver version
-```
-
-fix the `packageManager` field in `package.json`.
-
-Correct:
-
-```json
-"packageManager": "pnpm@10.32.1"
-```
-
-Incorrect:
-
-```json
-"packageManager": "pnpm@10"
-```
-
-Then run:
+### Repo root
 
 ```bash
 pnpm install
+pnpm --filter web dev
+pnpm --filter mobile start
 ```
 
----
-
-## Docker command does not work inside WSL
-
-Make sure:
-
-- Docker Desktop is running
-- WSL integration is enabled in Docker Desktop
-- you are inside the integrated Ubuntu distro
-
-Check:
+### Backend
 
 ```bash
-docker version
-docker compose version
+cd apps/api
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+fastapi dev app/main.py --host 0.0.0.0 --port 8000
+alembic upgrade head
 ```
 
----
-
-## `code .` does not work in WSL
-
-Make sure VS Code is installed on Windows and the **Remote - WSL** extension is installed.
-
-Then reopen WSL and try again:
+### Docker
 
 ```bash
-code .
-```
-
----
-
-## Android emulator is slow
-
-This is common on some Windows machines.
-
-Try:
-
-- using a physical Android phone
-- reducing emulator RAM usage
-- making sure virtualization is enabled in BIOS/UEFI
-
----
-
-## Useful project habits
-
-- keep the repository in `~/dev/...` inside WSL
-- run all Node / pnpm / backend commands inside WSL
-- use Docker Desktop only as the container runtime
-- do not keep containers, WSL, and development servers running after work unless necessary
-- run `pnpm install` after dependency changes
-- run `pnpm lint` and `pnpm test` before pushing
-- keep `.env` files local and never commit secrets
-
----
-
-## Recommended first boot sequence
-
-If this is your very first run on a fresh machine, the usual sequence is:
-
-```bash
-wsl
-cd ~/dev
-git clone <REPOSITORY_URL>
-cd <REPOSITORY_NAME>
-# optionally: cd core
-
-code .
-
-pnpm install
 docker compose -f infra/docker/docker-compose.yml up -d
-pnpm dev
-```
-
----
-
-## Recommended shutdown sequence
-
-At the end of the day:
-
-```bash
-# in the terminal running dev servers
-Ctrl + C
-
-# in WSL
+docker compose -f infra/docker/docker-compose.yml stop
 docker compose -f infra/docker/docker-compose.yml down
+docker ps
+```
 
-# in PowerShell or CMD
+### Windows / WSL
+
+```powershell
+wsl
+wsl -l -v
 wsl --shutdown
 ```
 
-Then close Docker Desktop if you are done for the day.
+---
+
+## 15. Recommended team rules
+
+To keep the environment predictable for everyone:
+
+- always develop from **WSL**, not from `C:\...`
+- commit lockfiles: `pnpm-lock.yaml`
+- do not commit `.env` files with secrets
+- do not commit `.venv/`
+- avoid changing tool versions casually
+- when upgrading Node / pnpm / Python / Expo / FastAPI, announce it in the team chat and update this document
+- stop Docker containers and dev servers after work
 
 ---
 
-## Reference links
+## 16. Troubleshooting
 
-- WSL installation: https://learn.microsoft.com/en-us/windows/wsl/install
-- Docker Desktop on Windows: https://docs.docker.com/desktop/setup/install/windows-install/
-- Docker Desktop with WSL 2 backend: https://docs.docker.com/desktop/features/wsl/
-- Docker + WSL best practice: https://docs.docker.com/desktop/features/wsl/use-wsl/
-- VS Code Remote - WSL: https://code.visualstudio.com/docs/remote/wsl
-- Expo environment setup: https://docs.expo.dev/get-started/set-up-your-environment/
-- Expo Android emulator guide: https://docs.expo.dev/workflow/android-studio-emulator/
-- Expo iOS simulator note: https://docs.expo.dev/workflow/ios-simulator/
-- pnpm installation: https://pnpm.io/installation
-- Next.js installation: https://nextjs.org/docs/app/getting-started/installation
-- NestJS CLI: https://docs.nestjs.com/cli/overview
-- Docker Compose `stop`: https://docs.docker.com/reference/cli/docker/compose/stop/
-- Docker Compose `down`: https://docs.docker.com/reference/cli/docker/compose/down/
-- WSL shutdown command: https://learn.microsoft.com/en-us/windows/wsl/basic-commands
+### `docker: command not found` inside WSL
+- Check that Docker Desktop is installed
+- Check that WSL integration is enabled for Ubuntu
+- Restart Docker Desktop
+
+### `pnpm` version problems
+- Run:
+
+```bash
+npm install --global corepack@latest
+corepack enable
+corepack prepare pnpm@latest-10 --activate
+```
+
+- If the repo pins pnpm in `package.json`, make sure the pinned version is a full semver version, not only a major version.
+
+### Backend dependencies are missing
+- Run:
+
+```bash
+cd apps/api
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### `fastapi: command not found`
+- The virtual environment is probably not active, or FastAPI is not installed.
+- Run:
+
+```bash
+cd apps/api
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Expo cannot find Android emulator
+- Open Android Studio first
+- Start an emulator from the Device Manager
+- Then run the mobile app again
+
+### Ports are already in use
+- Check what is running on:
+  - `3000` for web
+  - `8000` for API
+  - `5432` for PostgreSQL
+- Stop the conflicting process or change the local port
 
 ---
 
-## Maintainer note
+## 17. Final note
 
-If the repo structure or commands change, update this file together with:
+This guide is the baseline for local development. As the repository evolves, update this file whenever:
 
-- `.env.example`
-- `package.json` scripts
-- `infra/docker/docker-compose.yml`
-- onboarding notes in the main `README.md`
+- a new service is added,
+- a port changes,
+- the local Docker stack changes,
+- the FastAPI startup command changes,
+- the mobile workflow changes,
+- the SSO or Snipe-IT configuration becomes mandatory for local development.
