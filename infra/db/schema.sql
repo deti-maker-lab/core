@@ -3,7 +3,7 @@
 -- =========================================================
 
 -- How to run schema?
--- psql -U makerlab_app -d makerlab -f schema.sql
+-- psql 127.0.0.1 -U makerlab_app -d makerlab -f schema.sql
 
 -- Optional: clean start
 DROP TABLE IF EXISTS notifications CASCADE;
@@ -265,12 +265,3 @@ CREATE INDEX idx_status_history_changed_by ON status_history(changed_by);
 
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_is_read ON notifications(is_read);
-
--- =========================================================
--- OPTIONAL SAMPLE DATA
--- =========================================================
--- INSERT INTO users (name, email, role, nmec)
--- VALUES
--- ('Admin User', 'admin@example.com', 'admin', '00000'),
--- ('Supervisor User', 'supervisor@example.com', 'supervisor', '11111'),
--- ('Student User', 'student@example.com', 'student', '22222');
