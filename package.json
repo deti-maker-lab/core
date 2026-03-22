@@ -9,6 +9,8 @@
     "test": "turbo run test"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/types": "^7.29.0",
     "turbo": "latest",
     "typescript": "latest"
   }
