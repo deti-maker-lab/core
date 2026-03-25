@@ -3,7 +3,8 @@
   "private": true,
   "packageManager": "pnpm@10.32.1",
   "scripts": {
-    "dev": "turbo run dev",
+    "api": "turbo run dev --filter=api",
+    "dev": "turbo run dev --filter=api --filter=mobile",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test"
@@ -11,6 +12,7 @@
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@babel/types": "^7.29.0",
+    "@tailwindcss/oxide-linux-x64-gnu": "4.2.1",
     "turbo": "latest",
     "typescript": "latest"
   }
