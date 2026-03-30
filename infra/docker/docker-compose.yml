@@ -6,10 +6,38 @@ services:
       POSTGRES_DB: makerlab
       POSTGRES_USER: makerlab
       POSTGRES_PASSWORD: makerlab
-    ports:
-      - "5432:5432"
     volumes:
       - makerlab_postgres:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ../../apps/api
+    ports:
+      - "8000:8000"
+    container_name: makerlab-api
+    env_file: ../../apps/api/.env
+    depends_on:
+      - postgres
+    # Não expõe porta directamente — só o Nginx acede
+
+  web:
+    build:
+      context: ../../apps/web
+    ports:
+      - "3000:3000"
+    container_name: makerlab-web
+    # Não expõe porta directamente — só o Nginx acede
+
+  nginx:
+    image: nginx:alpine
+    container_name: makerlab-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - api
+      - web
 
 volumes:
   makerlab_postgres:

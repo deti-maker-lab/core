@@ -3,8 +3,11 @@
 from fastapi import FastAPI, Depends
 from sqlmodel import Session, text
 from db.database import get_session
+from auth.router import router as auth_router
 
 app = FastAPI(title="DETI Maker Lab API", version="1.0")
+
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
 
 @app.get("/")
 def read_root():

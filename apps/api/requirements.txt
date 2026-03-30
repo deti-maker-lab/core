@@ -1,5 +1,10 @@
 fastapi
+fastapi[standard]
 uvicorn[standard]
+requests
+requests-oauthlib
 sqlmodel
 pydantic-settings
 psycopg2-binary
+python-dotenv
+PyJWT

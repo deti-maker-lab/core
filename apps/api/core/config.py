@@ -8,6 +8,13 @@ class Settings(BaseSettings):
     POSTGRES_SERVER: str
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str
+    
+    DML_AUTH_KEY: str
+    DML_AUTH_SECRET: str
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str
+    JWT_EXPIRE_MINUTES: int
+    FRONTEND_URL: str
 
     @property
     def DATABASE_URI(self) -> str:
