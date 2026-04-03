@@ -26,6 +26,8 @@ CREATE TABLE users (
     email VARCHAR(255) NOT NULL UNIQUE,
     role VARCHAR(50) NOT NULL,
     nmec VARCHAR(50),
+    course VARCHAR(200),
+    academic_year VARCHAR(20),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT chk_users_role

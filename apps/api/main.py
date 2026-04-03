@@ -7,7 +7,7 @@ from auth.router import router as auth_router
 
 app = FastAPI(title="DETI Maker Lab API", version="1.0")
 
-app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(auth_router, tags=["auth"])
 
 @app.get("/")
 def read_root():
