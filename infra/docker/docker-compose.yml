@@ -4,44 +4,99 @@ services:
   postgres:
     image: postgres:16
     container_name: makerlab-postgres
-    environment:
-      POSTGRES_DB: makerlab
-      POSTGRES_USER: makerlab
-      POSTGRES_PASSWORD: makerlab
+    restart: unless-stopped
+    env_file:
+      - ../db/.env.postgres
     volumes:
       - makerlab_postgres:/var/lib/postgresql/data
+      - ../db/init/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
 
   api:
     build:
       context: ../../apps/api
-    ports:
-      - "8000:8000"
+    restart: unless-stopped
     container_name: makerlab-api
     env_file: ../../apps/api/.env
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8000"
+    networks:
+      - backend
     # Não expõe porta directamente — só o Nginx acede
 
   web:
     build:
       context: ../../apps/web
-    ports:
-      - "3000:3000"
+    restart: unless-stopped
+    expose:
+      - "3000"
     container_name: makerlab-web
+    networks:
+      - backend
     # Não expõe porta directamente — só o Nginx acede
+
+  snipeit-db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    env_file:
+      - ../snipeit/.env.snipeit
+    volumes:
+      - snipeit_db_data:/var/lib/mysql
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - backend
+
+  snipeit:
+    image: snipe/snipe-it:v8.3.6
+    restart: unless-stopped
+    env_file:
+      - ../snipeit/.env.snipeit
+    depends_on:
+      snipeit-db:
+        condition: service_healthy
+    volumes:
+      - snipeit_storage:/var/lib/snipeit
+    expose:
+      - "80"
+    networks:
+      - backend
 
   nginx:
     image: nginx:alpine
     container_name: makerlab-nginx
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ../nginx/conf.d:/etc/nginx/conf.d:ro  
-      - ../nginx/certs:/etc/nginx/certs:ro 
+      - ../nginx/conf.d:/etc/nginx/conf.d:ro
+      - ../nginx/certs:/etc/nginx/certs:ro
     depends_on:
       - api
       - web
+      - snipeit
+    networks:
+      - backend
 
 volumes:
   makerlab_postgres:
+  snipeit_db_data:
+  snipeit_storage:
+
+
+networks:
+  backend:
+    driver: bridge
