@@ -16,6 +16,12 @@ class Settings(BaseSettings):
     JWT_EXPIRE_MINUTES: int
     FRONTEND_URL: str
 
+    # Snipe-IT Configuration
+    SNIPEIT_BASE_URL: str
+    SNIPEIT_API_TOKEN: str
+    SNIPEIT_TIMEOUT_SECONDS: int = 10
+    SNIPEIT_DEPLOYABLE_STATUS_LABELS: str = "Ready to Deploy"  # Comma-separated list for dynamic resolution
+
     @property
     def DATABASE_URI(self) -> str:
         """
