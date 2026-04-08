@@ -105,6 +105,9 @@ CREATE TABLE equipment (
     id BIGSERIAL PRIMARY KEY,
     model_id BIGINT NOT NULL,
     snipeit_asset_id BIGINT UNIQUE,
+    name VARCHAR(150),
+    asset_tag VARCHAR(100),
+    serial VARCHAR(100),
     location VARCHAR(150),
     status VARCHAR(50) NOT NULL DEFAULT 'available',
     condition VARCHAR(50),
@@ -173,6 +176,9 @@ CREATE TABLE equipment_usage (
     due_at TIMESTAMP,
     returned_at TIMESTAMP,
     status VARCHAR(50) NOT NULL DEFAULT 'checked_out',
+    asset_name_snapshot VARCHAR(150),
+    asset_tag_snapshot VARCHAR(100),
+    model_name_snapshot VARCHAR(200),
 
     CONSTRAINT fk_equipment_usage_equipment
         FOREIGN KEY (equipment_id) REFERENCES equipment(id) ON DELETE RESTRICT,

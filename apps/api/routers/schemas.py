@@ -13,6 +13,21 @@ class EquipmentModelRead(BaseModel):
     class Config:
         from_attributes = True
 
+class EquipmentRead(BaseModel):
+    id: int
+    model_id: int
+    snipeit_asset_id: Optional[int] = None
+    name: Optional[str] = None
+    asset_tag: Optional[str] = None
+    serial: Optional[str] = None
+    location: Optional[str] = None
+    status: str
+    condition: Optional[str] = None
+    last_synced_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
 # Requisitions
 class RequisitionItemCreate(BaseModel):
     model_id: int
@@ -48,6 +63,9 @@ class EquipmentUsageRead(BaseModel):
     status: str
     checked_out_at: datetime
     returned_at: Optional[datetime] = None
+    asset_name_snapshot: Optional[str] = None
+    asset_tag_snapshot: Optional[str] = None
+    model_name_snapshot: Optional[str] = None
 
     class Config:
         from_attributes = True

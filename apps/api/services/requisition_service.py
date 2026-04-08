@@ -17,6 +17,7 @@ from services.constants import *
 from services.snipeit.assets import get_asset, checkout_asset, checkin_asset
 from services.snipeit.users import get_user_by_email
 from services.snipeit.exceptions import SnipeITAPIError, SnipeITAssetUnavailableError
+from services.inventory_service import sync_equipment
 import logging
 
 logger = logging.getLogger(__name__)
@@ -149,17 +150,24 @@ def assign_asset_to_requisition(session: Session, req_id: int, req_item_id: int,
     # Perform Snipe-IT checkout BEFORE local commit
     checkout_asset(snipeit_asset_id, snipeit_user.id, f"Checked out for Project {req.project_id}")
     
+    # Update local equipment fields from Snipe-IT directly since we are assigning
+    db_equip.name = snipe_asset.name
+    db_equip.asset_tag = snipe_asset.asset_tag
+    db_equip.serial = snipe_asset.serial
+    if snipe_asset.status_label:
+        db_equip.status = snipe_asset.status_label.name.lower()
+        
     # Create Local Usage
     usage = EquipmentUsage(
         equipment_id=db_equip.id,
         project_id=req.project_id,
         request_item_id=req_item.id,
-        status=USAGE_STATUS_ASSIGNED
+        status=USAGE_STATUS_ASSIGNED,
+        asset_name_snapshot=snipe_asset.name,
+        asset_tag_snapshot=snipe_asset.asset_tag,
+        model_name_snapshot=snipe_asset.model.name if snipe_asset.model else None
     )
     session.add(usage)
-    
-    # Update local Equipment state
-    db_equip.status = "checked_out"
     
     # Update Request status
     old_req_status = req.status
@@ -190,6 +198,13 @@ def return_asset(session: Session, usage_id: int, user_id: int, note: str = None
         
     # Check-in to Snipe-IT
     checkin_asset(db_equip.snipeit_asset_id, note or "Returned via internal backend.")
+    
+    # Resync the equipment cache to reflect 'available' or whatever state Snipe-IT put it in
+    try:
+        sync_equipment(session, db_equip.id)
+    except Exception as e:
+        logger.warning(f"Failed to cleanly sync equipment {db_equip.id} post-return: {e}")
+        db_equip.status = "available"
     
     # Update Local Usage
     usage.status = USAGE_STATUS_RETURNED
