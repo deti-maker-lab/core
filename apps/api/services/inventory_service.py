@@ -62,3 +62,30 @@ def list_catalog(session: Session):
     """
     statement = select(EquipmentModel).order_by(EquipmentModel.name)
     return session.exec(statement).all()
+
+def sync_equipment(session: Session, equipment_id: int) -> Equipment:
+    """
+    Refreshes local Equipment cache with data from Snipe-IT.
+    """
+    db_equip = session.get(Equipment, equipment_id)
+    if not db_equip or not db_equip.snipeit_asset_id:
+        raise ValueError("Valid local equipment mapped to Snipe-IT not found")
+        
+    from services.snipeit.assets import get_asset
+    snipe_asset = get_asset(db_equip.snipeit_asset_id)
+    if not snipe_asset:
+         raise ValueError("Asset not found in Snipe-IT")
+         
+    db_equip.name = snipe_asset.name
+    db_equip.asset_tag = snipe_asset.asset_tag
+    db_equip.serial = snipe_asset.serial
+    if snipe_asset.status_label:
+        db_equip.status = snipe_asset.status_label.name.lower()
+    
+    db_equip.last_synced_at = datetime.utcnow()
+    
+    session.add(db_equip)
+    session.commit()
+    session.refresh(db_equip)
+    
+    return db_equip

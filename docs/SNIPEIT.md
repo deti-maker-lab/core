@@ -59,3 +59,4 @@ Once the backend is configured, you can verify the connection by triggering the 
 **`POST /api/equipment/catalog/sync`**
 
 If the token is valid, it will return a success message with stats of how many items were updated. If the token is invalid, it will return a `401 Unauthorized` exception.
+

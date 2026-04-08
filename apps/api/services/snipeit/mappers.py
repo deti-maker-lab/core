@@ -29,6 +29,7 @@ class SnipeITAsset(BaseModel):
     id: int
     name: Optional[str] = None
     asset_tag: str
+    serial: Optional[str] = None
     model: Optional[SnipeITRef] = None
     status_label: Optional[SnipeITRef] = None
     category: Optional[SnipeITRef] = None
