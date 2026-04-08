@@ -5,7 +5,7 @@ from sqlmodel import Session, text
 from db.database import get_session
 from auth.router import router as auth_router
 
-app = FastAPI(title="DETI Maker Lab API", version="1.0")
+app = FastAPI(title="DETI Maker Lab API", version="1.0", root_path="/api")
 
 app.include_router(auth_router, tags=["auth"])
 
