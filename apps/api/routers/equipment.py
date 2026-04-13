@@ -4,13 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 from typing import List
 from db.database import get_session
+from db.models import User
 from routers.schemas import EquipmentModelRead, EquipmentRead
 from services.inventory_service import list_catalog, sync_catalog
+from auth.dependencies import require_any, require_lab_tech
 
 router = APIRouter(prefix="/equipment", tags=["equipment"])
 
 @router.get("/catalog", response_model=List[EquipmentModelRead])
-def get_catalog(session: Session = Depends(get_session)):
+def get_catalog(session: Session = Depends(get_session), current_user: User = Depends(require_any)):
     """
     Returns the locally cached catalog of equipment models.
     """
@@ -18,7 +20,7 @@ def get_catalog(session: Session = Depends(get_session)):
     return models
 
 @router.post("/catalog/sync", status_code=status.HTTP_200_OK)
-def trigger_catalog_sync(session: Session = Depends(get_session)):
+def trigger_catalog_sync(session: Session = Depends(get_session), current_user: User = Depends(require_lab_tech)):
     """
     Triggers an on-demand sync of Snipe-IT models to the local database.
     (In real life, restrict this to admins).
@@ -30,7 +32,7 @@ def trigger_catalog_sync(session: Session = Depends(get_session)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{equipment_id}", response_model=EquipmentRead)
-def get_local_equipment(equipment_id: int, session: Session = Depends(get_session)):
+def get_local_equipment(equipment_id: int, session: Session = Depends(get_session), current_user: User = Depends(require_any)):
     """
     Fetches real-time details of an assigned equipment asset natively from the local DB.
     """
@@ -41,7 +43,7 @@ def get_local_equipment(equipment_id: int, session: Session = Depends(get_sessio
     return equipment
 
 @router.post("/{equipment_id}/refresh", response_model=EquipmentRead)
-def refresh_local_equipment(equipment_id: int, session: Session = Depends(get_session)):
+def refresh_local_equipment(equipment_id: int, session: Session = Depends(get_session), current_user: User = Depends(require_lab_tech)):
     """
     Forces a local DB cache refresh of this specific equipment by fetching from Snipe-IT.
     """

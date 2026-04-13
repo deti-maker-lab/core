@@ -1,6 +1,6 @@
 # apps/api/services/inventory_service.py
 
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlmodel import Session, select
 from db.models import EquipmentModel, Equipment
 from services.snipeit.catalog import get_models
@@ -33,13 +33,13 @@ def sync_catalog(session: Session) -> dict:
                 
                 if db_model:
                     db_model.name = name
-                    db_model.last_synced_at = datetime.utcnow()
+                    db_model.last_synced_at = datetime.now(timezone.utc)
                     stats["updated"] += 1
                 else:
                     db_model = EquipmentModel(
                         name=name,
                         snipeit_model_id=snipe_id,
-                        last_synced_at=datetime.utcnow()
+                        last_synced_at=datetime.now(timezone.utc)
                     )
                     session.add(db_model)
                     stats["inserted"] += 1
@@ -82,7 +82,7 @@ def sync_equipment(session: Session, equipment_id: int) -> Equipment:
     if snipe_asset.status_label:
         db_equip.status = snipe_asset.status_label.name.lower()
     
-    db_equip.last_synced_at = datetime.utcnow()
+    db_equip.last_synced_at = datetime.now(timezone.utc)
     
     session.add(db_equip)
     session.commit()

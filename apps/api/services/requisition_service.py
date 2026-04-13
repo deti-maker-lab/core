@@ -1,6 +1,6 @@
 # apps/api/services/requisition_service.py
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Tuple
 from sqlmodel import Session, select
 from db.models import (
@@ -77,7 +77,7 @@ def approve_requisition(session: Session, req_id: int, user_id: int) -> Equipmen
         
     old_status = req.status
     req.status = REQ_STATUS_APPROVED
-    req.approved_at = datetime.utcnow()
+    req.approved_at = datetime.now(timezone.utc)
     
     _add_history(session, "EquipmentRequest", req.id, old_status, REQ_STATUS_APPROVED, user_id, "Requisition approved")
     session.commit()
@@ -208,7 +208,7 @@ def return_asset(session: Session, usage_id: int, user_id: int, note: str = None
     
     # Update Local Usage
     usage.status = USAGE_STATUS_RETURNED
-    usage.returned_at = datetime.utcnow()
+    usage.returned_at = datetime.now(timezone.utc)
     
     # Update Equipment
     db_equip.status = "available"

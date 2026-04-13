@@ -9,14 +9,7 @@ from db.models import EquipmentModel, Equipment
 from services.inventory_service import sync_equipment
 from services.snipeit.mappers import SnipeITAsset, SnipeITRef
 
-@pytest.fixture(name="session")
-def session_fixture():
-    engine = create_engine("sqlite:///:memory:")
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as session:
-        yield session
-
-@patch('services.inventory_service.get_asset')
+@patch('services.snipeit.assets.get_asset')
 def test_sync_equipment(mock_get_asset, session: Session):
     # Setup mock local DB
     model = EquipmentModel(name="Test Model", snipeit_model_id=1)
