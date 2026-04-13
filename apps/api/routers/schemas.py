@@ -74,6 +74,22 @@ class RequisitionReturn(BaseModel):
     usage_ids: List[int]
     note: Optional[str] = None
 
+class RequisitionItemRead(BaseModel):
+    id: int
+    model_id: int
+    quantity: int
+
+    class Config:
+        from_attributes = True
+
+class RequisitionReadDetail(RequisitionRead):
+    items: List[RequisitionItemRead] = []
+    rejection_reason: Optional[str] = None
+    approved_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
 # Projects
 class ProjectCreate(BaseModel):
     name: str

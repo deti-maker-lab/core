@@ -221,3 +221,28 @@ def return_asset(session: Session, usage_id: int, user_id: int, note: str = None
     session.refresh(usage)
     return usage
 
+def list_all_requisitions(session: Session) -> List[EquipmentRequest]:
+    return session.exec(
+        select(EquipmentRequest).order_by(EquipmentRequest.created_at.desc())
+    ).all()
+
+
+def list_project_requisitions(session: Session, project_id: int) -> List[EquipmentRequest]:
+    return session.exec(
+        select(EquipmentRequest)
+        .where(EquipmentRequest.project_id == project_id)
+        .order_by(EquipmentRequest.created_at.desc())
+    ).all()
+
+
+def get_requisition(session: Session, req_id: int) -> EquipmentRequest:
+    req = session.get(EquipmentRequest, req_id)
+    if not req:
+        raise ValueError("Requisition not found")
+    return req
+
+
+def get_requisition_items(session: Session, req_id: int) -> List[EquipmentRequestItem]:
+    return session.exec(
+        select(EquipmentRequestItem).where(EquipmentRequestItem.request_id == req_id)
+    ).all()
