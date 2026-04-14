@@ -17,6 +17,8 @@ class User(SQLModel, table=True):
     email: str = Field(max_length=255, unique=True)
     role: str = Field(max_length=50)
     nmec: Optional[str] = Field(default=None, max_length=50)
+    course: Optional[str] = Field(default=None, max_length=200)
+    academic_year: Optional[str] = Field(default=None, max_length=20)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 # =========================================================
@@ -75,9 +77,6 @@ class Equipment(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True, sa_type=BigInteger)
     model_id: int = Field(foreign_key="equipment_models.id", sa_type=BigInteger)
     snipeit_asset_id: Optional[int] = Field(default=None, sa_type=BigInteger, unique=True)
-    name: Optional[str] = Field(default=None, max_length=150)
-    asset_tag: Optional[str] = Field(default=None, max_length=100)
-    serial: Optional[str] = Field(default=None, max_length=100)
     location: Optional[str] = Field(default=None, max_length=150)
     status: str = Field(default="available", max_length=50)
     condition: Optional[str] = Field(default=None, max_length=50)
@@ -122,10 +121,6 @@ class EquipmentUsage(SQLModel, table=True):
     due_at: Optional[datetime] = Field(default=None)
     returned_at: Optional[datetime] = Field(default=None)
     status: str = Field(default="checked_out", max_length=50)
-    
-    asset_name_snapshot: Optional[str] = Field(default=None, max_length=150)
-    asset_tag_snapshot: Optional[str] = Field(default=None, max_length=100)
-    model_name_snapshot: Optional[str] = Field(default=None, max_length=200)
 
 # =========================================================
 # STATUS HISTORY

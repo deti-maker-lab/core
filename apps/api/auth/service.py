@@ -1,3 +1,5 @@
+# apps/api/auth/service.py
+
 import os
 import ssl
 import jwt
@@ -81,7 +83,8 @@ def get_user_data(resource_owner_key: str, resource_owner_secret: str):
 
     r_student = oauth.get(f"{PROTECTED_URL}?scope=student_info&format=json")
     r_student.raise_for_status()
-    student_info = r_student.json().get("NewDataSet", {}).get("ObterDadosAluno", {})
+    raw = r_student.json().get("NewDataSet", {}).get("ObterDadosAluno", {})
+    student_info = raw[0] if isinstance(raw, list) and raw else (raw if isinstance(raw, dict) else {})
 
     return {
         "email":         data_uu.get("email", ""),
@@ -98,19 +101,32 @@ def get_or_create_user(user_data: dict):
     db = next(get_session())
     try:
         user = db.exec(select(User).where(User.email == user_data["email"])).first()
+        full_name = f"{user_data.get('name', '')} {user_data.get('surname', '')}".strip()
+
         if not user:
-            full_name = f"{user_data.get('name', '')} {user_data.get('surname', '')}".strip()
             user = User(
                 name=full_name or user_data["email"].split("@")[0],
                 email=user_data["email"],
                 role="student",
                 nmec=user_data.get("nmec") or user_data.get("iupi"),
-                course=user_data.get("course"),
-                academic_year=user_data.get("academic_year"),
+                course=user_data.get("course") or None,
+                academic_year=user_data.get("academic_year") or None,
             )
             db.add(user)
-            db.commit()
-            db.refresh(user)
+        else:
+            if full_name:
+                user.name = full_name
+            if user_data.get("nmec"):
+                user.nmec = user_data["nmec"]
+            elif user_data.get("iupi") and not user.nmec:
+                user.nmec = user_data["iupi"]
+            if user_data.get("course"):
+                user.course = user_data["course"]
+            if user_data.get("academic_year"):
+                user.academic_year = user_data["academic_year"]
+
+        db.commit()
+        db.refresh(user)
         return user
     except Exception:
         db.rollback()

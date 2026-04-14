@@ -1,7 +1,7 @@
 # apps/api/routers/schemas.py
 
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 # Equipment & Catalog
@@ -138,3 +138,16 @@ class ProjectMemberAdd(BaseModel):
 
 class ProjectStatusUpdate(BaseModel):
     status: str
+
+# Users
+class UserRead(BaseModel):
+    id: int
+    name: str
+    email: str
+    role: str
+    nmec: Optional[str] = None
+    course: Optional[str] = None
+    academic_year: Optional[str] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

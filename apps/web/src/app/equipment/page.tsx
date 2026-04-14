@@ -1,8 +1,11 @@
+// apps/web/src/app/equipment/page.tsx
+
 "use client"; // Adicionamos isto para podermos usar estados (interatividade)
 
 import { useState } from "react";
-import { Search, Bell, UserCircle, Image as ImageIcon } from "lucide-react";
+import { Search, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
+import Header from "@/app/components/header";
 
 const equipment = [
   {
@@ -68,10 +71,7 @@ export default function EquipmentPage() {
     <main className="flex-1 p-8 bg-white min-h-screen font-sans text-gray-800">
 
       {/* Header */}
-      <div className="flex justify-end items-center gap-4 mb-6 text-gray-400">
-        <Bell size={24} />
-        <UserCircle size={28} />
-      </div>
+      <Header />
 
       {/* Title */}
       <h1 className="text-3xl font-bold mb-1">Equipment</h1>

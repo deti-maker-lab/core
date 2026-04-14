@@ -1,7 +1,9 @@
-// src/app/equipment/[equipmentId]/page.tsx
+// apps/web/src/app/equipment/[equipmentId]/page.tsx
+
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Bell, UserCircle, Image as ImageIcon, History, DollarSign, Hash, MapPin, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Image as ImageIcon, History, DollarSign, Hash, MapPin, CheckCircle2 } from "lucide-react";
+import Header from "@/app/components/header";
 
 // Mantive o teu array original
 const equipment = [
@@ -65,10 +67,7 @@ export default async function EquipmentDetails({
   return (
     <main className="flex-1 bg-white p-8 min-h-screen font-sans text-gray-800">
       {/* Header com Notificações */}
-      <div className="flex justify-end items-center gap-4 mb-6 text-gray-400">
-        <Bell size={24} />
-        <UserCircle size={28} />
-      </div>
+      <Header />
 
       {/* Botão Back */}
       <Link href="/equipment" className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mb-8 text-sm font-medium">

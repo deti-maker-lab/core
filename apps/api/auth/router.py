@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from fastapi.responses import RedirectResponse
 from .service import (
     get_oauth1_session,
@@ -12,6 +12,8 @@ from .service import (
     AUTHORIZATION_URL,
     FRONTEND_URL,
 )
+from .dependencies import get_current_user
+from .schemas import UserRead 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -38,4 +40,8 @@ def sso_callback(oauth_token: str, oauth_verifier: str):
     user      = get_or_create_user(user_data)
     token     = create_jwt_for_user(user)
 
-    return RedirectResponse(f"{FRONTEND_URL}?token={token}")
+    return RedirectResponse(f"{FRONTEND_URL}/auth/callback?token={token}")
+
+@router.get("/me", response_model=UserRead)
+def get_me(current_user = Depends(get_current_user)):
+    return current_user

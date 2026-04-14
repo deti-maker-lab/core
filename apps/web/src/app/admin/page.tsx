@@ -1,10 +1,13 @@
+// apps/web/src/app/admin/page.tsx
+
 "use client";
 
 import { useState } from "react";
 import { 
-  Bell, UserCircle, Folder, Cpu, 
+  Folder, Cpu, 
   X, Check, Users, Clock
 } from "lucide-react";
+import Header from "@/app/components/header";
 
 export default function TechnicianPortal() {
   // Estado para controlar o modal de rejeição
@@ -25,10 +28,7 @@ export default function TechnicianPortal() {
   return (
     <main className="flex-1 bg-gray-50 p-8 min-h-screen font-sans text-gray-800 relative">
       {/* Top Header */}
-      <div className="flex justify-end items-center gap-4 mb-6 text-gray-400">
-        <Bell size={24} className="cursor-pointer hover:text-gray-600 transition-colors" />
-        <UserCircle size={28} className="cursor-pointer hover:text-gray-600 transition-colors" />
-      </div>
+      <Header />
 
       {/* Page Title */}
       <div className="mb-10">
