@@ -26,7 +26,7 @@ class User(SQLModel, table=True):
 # =========================================================
 class Project(SQLModel, table=True):
     __tablename__ = "projects"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True, sa_type=BigInteger)
     name: str = Field(max_length=200)
     description: Optional[str] = Field(default=None, sa_column=Column(Text))
@@ -34,7 +34,6 @@ class Project(SQLModel, table=True):
     academic_year: Optional[str] = Field(default=None, max_length=20)
     group_number: Optional[int] = Field(default=None)
     created_by: int = Field(foreign_key="users.id", sa_type=BigInteger)
-    supervisor_id: int = Field(foreign_key="users.id", sa_type=BigInteger)
     status: str = Field(default="draft", max_length=50)
     tags: Optional[str] = Field(default=None, sa_column=Column(Text))
     links: Optional[str] = Field(default=None, sa_column=Column(Text))
@@ -121,6 +120,9 @@ class EquipmentUsage(SQLModel, table=True):
     due_at: Optional[datetime] = Field(default=None)
     returned_at: Optional[datetime] = Field(default=None)
     status: str = Field(default="checked_out", max_length=50)
+    asset_name_snapshot: Optional[str] = Field(default=None, max_length=200)
+    asset_tag_snapshot: Optional[str] = Field(default=None, max_length=100)
+    model_name_snapshot: Optional[str] = Field(default=None, max_length=200)
 
 # =========================================================
 # STATUS HISTORY

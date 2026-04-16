@@ -53,31 +53,27 @@ def get_equipment_detail(equipment_id: int, current_user: User = Depends(require
     if not asset:
         raise HTTPException(status_code=404, detail="Snipe-IT asset not found")
 
-    a = asset.model_dump() if hasattr(asset, "model_dump") else asset
-
-    model = a.get("model") or {}
-    category = a.get("category") or model.get("category") or {}
-    supplier = a.get("supplier") or {}
-    manufacturer = model.get("manufacturer") or {}
-    location = a.get("location") or {}
-
-    price_raw = a.get("purchase_cost")
-    if isinstance(price_raw, str):
-        price_raw = price_raw.replace(",", "")
-    try:
-        price = float(price_raw) if price_raw not in (None, "") else None
-    except Exception:
-        price = None
+    location_name = (
+        asset.location.name if asset.location else
+        asset.rtd_location.name if asset.rtd_location else
+        None
+    )
 
     return {
-        "id": a.get("id"),
-        "name": a.get("name") or model.get("name") or "Unnamed",
-        "category": category.get("name"),
-        "supplier": supplier.get("name") or manufacturer.get("name"),
-        "price": _parse_price(a.get("purchase_cost")),
-        "location": location.get("name"),
-        "image": a.get("image"),
-        "status": (a.get("status_label") or {}).get("name", "unknown"),
+        "id": asset.id,
+        "name": asset.name or (asset.model.name if asset.model else "Unnamed"),
+        "category": asset.category.name if asset.category else None,
+        "supplier": (
+            asset.supplier.name if asset.supplier else (
+                asset.model.manufacturer.name
+                if asset.model and hasattr(asset.model, "manufacturer") and asset.model.manufacturer
+                else None
+            )
+        ),
+        "price": _parse_price(asset.purchase_cost),
+        "location": location_name,
+        "image": asset.image,
+        "status": asset.status_label.name if asset.status_label else "unknown",
     }
 
 @router.post("/{equipment_id}/refresh", response_model=EquipmentRead)

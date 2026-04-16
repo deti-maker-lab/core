@@ -106,7 +106,7 @@ class RequisitionReadDetail(RequisitionRead):
 # Projects
 class ProjectMemberCreate(BaseModel):
     user_id: int
-    role: str = "contributor"
+    role: str = "member"
 
 class ProjectCreate(BaseModel):
     name: str
@@ -114,10 +114,10 @@ class ProjectCreate(BaseModel):
     course: Optional[str] = None
     academic_year: Optional[str] = None
     group_number: Optional[int] = None
-    supervisor_id: int
     tags: Optional[str] = None
     links: Optional[str] = None
     members: List[ProjectMemberCreate] = []
+
 
 class ProjectRead(BaseModel):
     id: int
@@ -127,7 +127,6 @@ class ProjectRead(BaseModel):
     academic_year: Optional[str] = None
     group_number: Optional[int] = None
     created_by: int
-    supervisor_id: int
     status: str
     tags: Optional[str] = None
     links: Optional[str] = None

@@ -1,5 +1,6 @@
 "use client";
 
+// apps/web/src/app/projects/new/page.tsx
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -15,7 +16,7 @@ import {
   type EquipmentModel,
 } from "@/lib/api";
 
-const MEMBER_ROLES = ["leader", "contributor", "observer", "advisor"];
+const MEMBER_ROLES = ["supervisor", "member", "observer", "advisor"];
 
 interface MemberEntry {
   user: User;
@@ -46,13 +47,15 @@ export default function NewProjectPage() {
   const [tagInput, setTagInput] = useState("");
   const [links, setLinks] = useState<string[]>([]);
   const [linkInput, setLinkInput] = useState("");
-  const [supervisorId, setSupervisorId] = useState<number | "">("");
+  const [selectedSupervisorId, setSelectedSupervisorId] = useState<number | "">("");
   const [members, setMembers] = useState<MemberEntry[]>([]);
   const [selectedMemberId, setSelectedMemberId] = useState<number | "">("");
   const [equipmentItems, setEquipmentItems] = useState<EquipmentEntry[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<number | "">("");
 
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
       try {
         const [me, allUsers, cat] = await Promise.all([
@@ -60,15 +63,23 @@ export default function NewProjectPage() {
           usersApi.list(),
           equipmentApi.catalog(),
         ]);
+        if (cancelled) return;
         setCurrentUser(me);
         setSupervisors(allUsers.filter((u) => u.role === "professor"));
         setAvailableUsers(allUsers.filter((u) => u.role === "student" && u.id !== me.id));
         setCatalog(cat);
-      } catch {
-        router.push("/");
+      } catch (err: any) {
+        if (cancelled) return;
+        if (err?.message?.includes("401") || err?.message?.includes("Unauthorized")) {
+          router.push("/");
+        } else {
+          setError(err?.message ?? "Failed to load page data.");
+        }
       }
     }
+
     load();
+    return () => { cancelled = true; };
   }, []);
 
   const addTag = () => {
@@ -87,8 +98,19 @@ export default function NewProjectPage() {
     if (!selectedMemberId) return;
     const user = availableUsers.find((u) => u.id === selectedMemberId);
     if (!user || members.find((m) => m.user.id === selectedMemberId)) return;
-    setMembers([...members, { user, role: "contributor" }]);
+    setMembers([...members, { user, role: "member" }]);
     setSelectedMemberId("");
+  };
+
+  const addSupervisor = () => {
+    if (!selectedSupervisorId) return;
+
+    const user = supervisors.find((u) => u.id === selectedSupervisorId);
+
+    if (!user || members.find((m) => m.user.id === selectedSupervisorId)) return;
+
+    setMembers([...members, { user, role: "supervisor" }]);
+    setSelectedSupervisorId("");
   };
 
   const updateMemberRole = (userId: number, role: string) => {
@@ -110,7 +132,12 @@ export default function NewProjectPage() {
 
   const handleSubmit = async () => {
     if (!name.trim()) { setError("Project name is required."); return; }
-    if (!supervisorId) { setError("Please select a supervisor."); return; }
+
+    const supervisorMembers = members.filter((m) => m.role === "supervisor");
+    if (supervisorMembers.length === 0) {
+      setError("Please add at least one supervisor.");
+      return;
+    }
 
     setSubmitting(true);
     setError(null);
@@ -122,7 +149,6 @@ export default function NewProjectPage() {
         course: course.trim() || undefined,
         academic_year: academicYear.trim() || undefined,
         group_number: groupNumber ? parseInt(groupNumber) : undefined,
-        supervisor_id: supervisorId as number,
         tags: tags.length ? tags.join(",") : undefined,
         links: links.length ? links.join(",") : undefined,
         members: members.map((m) => ({ user_id: m.user.id, role: m.role })),
@@ -158,8 +184,6 @@ export default function NewProjectPage() {
         <p className="text-gray-400 font-medium mb-10">Fill in the details to submit your project for approval.</p>
 
         <div className="flex flex-col gap-6">
-
-          {/* Project Information */}
           <section className="border border-gray-200 rounded-[28px] p-8 bg-white shadow-sm">
             <h2 className="text-lg font-bold mb-6">Project Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -215,7 +239,6 @@ export default function NewProjectPage() {
             </div>
           </section>
 
-          {/* Tags */}
           <section className="border border-gray-200 rounded-[28px] p-8 bg-white shadow-sm">
             <div className="flex items-center gap-2 mb-6">
               <Tag size={18} className="text-gray-400" />
@@ -247,7 +270,6 @@ export default function NewProjectPage() {
             )}
           </section>
 
-          {/* Documentation & Links */}
           <section className="border border-gray-200 rounded-[28px] p-8 bg-white shadow-sm">
             <div className="flex items-center gap-2 mb-6">
               <LinkIcon size={18} className="text-gray-400" />
@@ -279,22 +301,63 @@ export default function NewProjectPage() {
             )}
           </section>
 
-          {/* Supervisor */}
           <section className="border border-gray-200 rounded-[28px] p-8 bg-white shadow-sm">
-            <h2 className="text-lg font-bold mb-6">Supervisor <span className="text-red-400">*</span></h2>
-            <select
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors bg-white"
-              value={supervisorId}
-              onChange={(e) => setSupervisorId(e.target.value ? parseInt(e.target.value) : "")}
-            >
-              <option value="">Select a supervisor...</option>
-              {supervisors.map((s) => (
-                <option key={s.id} value={s.id}>{s.name} — {s.email}</option>
+            <h2 className="text-lg font-bold mb-6">
+              Supervisors <span className="text-red-400">*</span>
+            </h2>
+            {members
+              .filter((m) => m.role === "supervisor")
+              .map((m) => (
+                <div
+                  key={m.user.id}
+                  className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mb-2"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-sm font-bold text-gray-400">
+                      {m.user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-sm">{m.user.name}</div>
+                      <div className="text-xs text-gray-400">{m.user.email}</div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      setMembers(members.filter((x) => x.user.id !== m.user.id))
+                    }
+                  >
+                    <X size={16} className="text-gray-300 hover:text-red-400 transition-colors" />
+                  </button>
+                </div>
               ))}
-            </select>
+            <div className="flex items-center gap-2 mt-4">
+              <select
+                className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:border-gray-400 transition-colors"
+                value={selectedSupervisorId}
+                onChange={(e) =>
+                  setSelectedSupervisorId(e.target.value ? parseInt(e.target.value) : "")
+                }
+              >
+                <option value="">Add a supervisor...</option>
+                {supervisors
+                  .filter((s) => !members.find((m) => m.user.id === s.id))
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} — {s.email}
+                    </option>
+                  ))}
+              </select>
+
+              <button
+                onClick={addSupervisor}
+                className="p-3 bg-gray-900 text-white rounded-xl hover:bg-gray-700 transition-colors"
+              >
+                <Plus size={18} />
+              </button>
+            </div>
           </section>
 
-          {/* Team Members */}
           <section className="border border-gray-200 rounded-[28px] p-8 bg-white shadow-sm">
             <div className="flex items-center gap-2 mb-6">
               <Users size={18} className="text-gray-400" />
@@ -316,7 +379,9 @@ export default function NewProjectPage() {
               </div>
             )}
 
-            {members.map((m) => (
+            {members
+              .filter((m) => m.role !== "supervisor")
+              .map((m) => (
               <div key={m.user.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mb-2">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-sm font-bold text-gray-400">
@@ -333,9 +398,13 @@ export default function NewProjectPage() {
                     value={m.role}
                     onChange={(e) => updateMemberRole(m.user.id, e.target.value)}
                   >
-                    {MEMBER_ROLES.filter((r) => r !== "leader").map((r) => (
-                      <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>
-                    ))}
+                    {MEMBER_ROLES
+                      .filter((r) => r !== "leader" && r !== "supervisor")
+                      .map((r) => (
+                        <option key={r} value={r}>
+                          {r.charAt(0).toUpperCase() + r.slice(1)}
+                        </option>
+                      ))}
                   </select>
                   <button onClick={() => setMembers(members.filter((x) => x.user.id !== m.user.id))}>
                     <X size={16} className="text-gray-300 hover:text-red-400 transition-colors" />
@@ -363,7 +432,6 @@ export default function NewProjectPage() {
             </div>
           </section>
 
-          {/* Equipment Request */}
           <section className="border border-gray-200 rounded-[28px] p-8 bg-white shadow-sm">
             <div className="flex items-center gap-2 mb-6">
               <Cpu size={18} className="text-gray-400" />
@@ -437,7 +505,6 @@ export default function NewProjectPage() {
               {submitting ? "Submitting..." : "Submit Request"}
             </button>
           </div>
-
         </div>
       </div>
     </main>

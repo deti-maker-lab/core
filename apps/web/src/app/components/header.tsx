@@ -1,5 +1,6 @@
 "use client";
 
+// // apps/web/src/app/components/header.tsx
 import { useEffect, useState } from "react";
 import { Bell, UserCircle, LogIn, LogOut } from "lucide-react";
 import { auth } from "@/lib/api";

@@ -91,6 +91,10 @@ def list_equipment_catalog_from_snipeit():
         supplier = a.get("supplier") or {}
         manufacturer = model.get("manufacturer") or {}
         location = a.get("location") or {}
+        image = a.get("image")
+        
+        if not isinstance(image, str):
+            image = None
 
         result.append({
             "id": a.get("id"),
@@ -100,6 +104,7 @@ def list_equipment_catalog_from_snipeit():
             "price": _parse_price(a.get("purchase_cost")),
             "status": (a.get("status_label") or {}).get("name", "unknown"),
             "location": location.get("name"),
+            "image": image,
         })
 
     return result

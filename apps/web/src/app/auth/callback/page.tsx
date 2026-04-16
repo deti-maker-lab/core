@@ -1,4 +1,6 @@
 "use client";
+
+// // apps/web/src/app/auth/callback/sidebar.tsx
 import { useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -13,7 +15,7 @@ export default function AuthCallback() {
     }
 
     const returnUrl = localStorage.getItem("returnUrl") ?? "/";
-    localStorage.removeItem("returnUrl"); // limpar depois de usar
+    localStorage.removeItem("returnUrl");
     window.location.replace(returnUrl);
   }, []);
 

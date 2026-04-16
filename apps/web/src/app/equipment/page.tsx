@@ -15,6 +15,7 @@ type EquipmentItem = {
   supplier?: string;
   status?: string;
   location?: string;
+  image?: string,
 };
 
 const filterOptions = ["All", "Available", "Checked Out", "Maintenance"];
@@ -44,7 +45,6 @@ export default function EquipmentPage() {
         const list = Array.isArray(data)
           ? data
           : (data as any)?.rows || (data as any)?.items || [];
-
         setEquipment(
           list.map((item: any) => ({
             id: Number(item.id),
@@ -53,6 +53,7 @@ export default function EquipmentPage() {
             price: item.price ?? item.purchase_cost ?? "-",
             status: item.status ?? item.status_label ?? "unknown",
             supplier: item.supplier ?? item.supplier_name ?? "",
+            image: item.image ?? item.image_url ?? undefined,
           }))
         );
       } catch (e: any) {
@@ -134,8 +135,16 @@ export default function EquipmentPage() {
                 className="flex items-center justify-between border border-gray-200 rounded-xl p-4 hover:bg-gray-50 transition"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gray-100 flex items-center justify-center rounded-lg">
-                    <ImageIcon className="text-gray-300" />
+                  <div className="w-12 h-12 bg-gray-100 flex items-center justify-center rounded-lg overflow-hidden">
+                    {item.image ? (
+                      <img
+                        src={item.image.startsWith("http") ? item.image : `https://inventory.deti-makerlab.ua.pt/uploads/assets/${item.image}`}
+                        alt={item.name}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <ImageIcon className="text-gray-300" />
+                    )}
                   </div>
 
                   <div>

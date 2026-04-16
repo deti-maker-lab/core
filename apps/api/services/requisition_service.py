@@ -35,7 +35,6 @@ def _add_history(session: Session, entity_type: str, entity_id: int, old_status:
 
 
 def create_requisition(session: Session, project_id: int, user_id: int, items_data: List[Dict[str, int]]) -> EquipmentRequest:
-    # Validate project
     project = session.get(Project, project_id)
     if not project:
         raise ValueError("Project not found")
@@ -46,22 +45,34 @@ def create_requisition(session: Session, project_id: int, user_id: int, items_da
         status=REQ_STATUS_PENDING
     )
     session.add(req)
-    session.flush() # Get req.id
-    
+    session.flush()
+
     for item in items_data:
-        # Validate model
-        model = session.get(EquipmentModel, item["model_id"])
+        model_id = item["model_id"]
+        quantity = item.get("quantity", 1)
+
+        model = session.get(EquipmentModel, model_id)
         if not model:
-            raise ValueError(f"Equipment model {item['model_id']} not found")
-            
+            model = EquipmentModel(
+                id=model_id,
+                name=f"Model #{model_id}",
+                snipeit_model_id=model_id,
+            )
+            session.add(model)
+            session.flush()
+
         req_item = EquipmentRequestItem(
             request_id=req.id,
-            model_id=item["model_id"],
-            quantity=item["quantity"]
+            model_id=model_id,
+            quantity=quantity,
         )
         session.add(req_item)
-        
-    _add_history(session, "EquipmentRequest", req.id, None, REQ_STATUS_PENDING, user_id, "Requisition created")
+
+    try:
+        _add_history(session, "EquipmentRequest", req.id, None, REQ_STATUS_PENDING, user_id, "Requisition created")
+    except Exception as e:
+        logger.warning(f"Could not write status history: {e}")
+
     session.commit()
     session.refresh(req)
     return req

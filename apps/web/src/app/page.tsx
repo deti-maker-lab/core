@@ -49,7 +49,7 @@ function HomeContent() {
       }
     }
     load();
-  }, [searchParams, router]);
+  }, []);
 
   const activeProjects = projectList.filter((p) => p.status === "active").length;
   const recentProjects = [...projectList]

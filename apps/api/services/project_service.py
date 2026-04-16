@@ -39,9 +39,15 @@ def get_project(session: Session, project_id: int) -> Project:
 
 
 def create_project(session: Session, data: dict, created_by: int) -> Project:
-    supervisor = session.get(User, data["supervisor_id"])
-    if not supervisor or supervisor.role != "professor":
-        raise ValueError("Invalid supervisor")
+    members_data = data.get("members", [])
+    supervisors = [m for m in members_data if m.get("role") == "supervisor"]
+    if not supervisors:
+        raise ValueError("At least one supervisor is required")
+
+    for sup in supervisors:
+        user = session.get(User, sup["user_id"])
+        if not user or user.role != "professor":
+            raise ValueError(f"User {sup['user_id']} is not a professor and cannot be supervisor")
 
     project = Project(
         name=data["name"],
@@ -50,19 +56,18 @@ def create_project(session: Session, data: dict, created_by: int) -> Project:
         academic_year=data.get("academic_year"),
         group_number=data.get("group_number"),
         created_by=created_by,
-        supervisor_id=data["supervisor_id"],
+        status="pending",
         tags=data.get("tags"),
         links=data.get("links"),
-        status="pending",
     )
     session.add(project)
     session.flush()
 
     session.add(ProjectMember(project_id=project.id, user_id=created_by, role="leader"))
 
-    for m in data.get("members", []):
-        user_id = m["user_id"] if isinstance(m, dict) else m.user_id
-        role = m.get("role", "contributor") if isinstance(m, dict) else m.role
+    for m in members_data:
+        user_id = m["user_id"]
+        role = m.get("role", "member")
         if user_id == created_by:
             continue
         member = session.get(User, user_id)
@@ -70,7 +75,11 @@ def create_project(session: Session, data: dict, created_by: int) -> Project:
             raise ValueError(f"User {user_id} not found")
         session.add(ProjectMember(project_id=project.id, user_id=user_id, role=role))
 
-    _add_history(session, project.id, None, "pending", created_by, "Project created")
+    try:
+        _add_history(session, project.id, None, "pending", created_by, "Project created")
+    except Exception as e:
+        logger.warning(f"Could not write status history: {e}")
+
     session.commit()
     session.refresh(project)
     return project

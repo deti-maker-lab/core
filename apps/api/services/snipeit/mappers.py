@@ -34,6 +34,11 @@ class SnipeITAsset(BaseModel):
     status_label: Optional[SnipeITRef] = None
     category: Optional[SnipeITRef] = None
     assigned_to: Optional[Any] = None # Detailed user info or dict
+    location: Optional[SnipeITRef] = None
+    purchase_cost: Optional[str] = None
+    image: Optional[str] = None
+    supplier: Optional[SnipeITRef] = None
+    rtd_location: Optional[SnipeITRef] = None
 
 class SnipeITPaginatedResponse(BaseModel):
     total: int

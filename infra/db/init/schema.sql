@@ -45,7 +45,6 @@ CREATE TABLE projects (
     academic_year VARCHAR(20),
     group_number INTEGER,
     created_by BIGINT NOT NULL,
-    supervisor_id BIGINT NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'draft',
     tags TEXT,
     links TEXT,
@@ -80,7 +79,7 @@ CREATE TABLE project_members (
     CONSTRAINT uq_project_member UNIQUE (project_id, user_id),
 
     CONSTRAINT chk_project_members_role
-        CHECK (role IN ('leader', 'contributor', 'observer', 'advisor'))
+        CHECK (role IN ('leader', 'contributor', 'observer', 'advisor', 'supervisor'))
 );
 
 -- =========================================================
