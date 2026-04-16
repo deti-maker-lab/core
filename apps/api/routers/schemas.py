@@ -22,12 +22,39 @@ class EquipmentRead(BaseModel):
     serial: Optional[str] = None
     location: Optional[str] = None
     status: str
-    condition: Optional[str] = None
+    image: Optional[str] = None
     last_synced_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
+class EquipmentUsageRead(BaseModel):
+    id: int
+    equipment_id: int
+    project_id: int
+    status: str
+    checked_out_at: datetime
+    returned_at: Optional[datetime] = None
+    asset_name_snapshot: Optional[str] = None
+    asset_tag_snapshot: Optional[str] = None
+    model_name_snapshot: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+        
+class EquipmentCatalogItemRead(BaseModel):
+    id: int
+    name: str
+    category: Optional[str] = None
+    supplier: Optional[str] = None
+    price: Optional[float] = None
+    status: str
+    location: Optional[str] = None
+    image: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+        
 # Requisitions
 class RequisitionItemCreate(BaseModel):
     model_id: int
@@ -56,20 +83,6 @@ class RequisitionAssignItem(BaseModel):
 class RequisitionAssign(BaseModel):
     items: List[RequisitionAssignItem]
 
-class EquipmentUsageRead(BaseModel):
-    id: int
-    equipment_id: int
-    project_id: int
-    status: str
-    checked_out_at: datetime
-    returned_at: Optional[datetime] = None
-    asset_name_snapshot: Optional[str] = None
-    asset_tag_snapshot: Optional[str] = None
-    model_name_snapshot: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-
 class RequisitionReturn(BaseModel):
     usage_ids: List[int]
     note: Optional[str] = None
@@ -91,6 +104,10 @@ class RequisitionReadDetail(RequisitionRead):
         from_attributes = True
 
 # Projects
+class ProjectMemberCreate(BaseModel):
+    user_id: int
+    role: str = "contributor"
+
 class ProjectCreate(BaseModel):
     name: str
     description: Optional[str] = None
@@ -100,7 +117,7 @@ class ProjectCreate(BaseModel):
     supervisor_id: int
     tags: Optional[str] = None
     links: Optional[str] = None
-    member_ids: List[int] = []
+    members: List[ProjectMemberCreate] = []
 
 class ProjectRead(BaseModel):
     id: int

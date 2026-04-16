@@ -4,9 +4,26 @@ from datetime import datetime, timezone
 from sqlmodel import Session, select
 from db.models import EquipmentModel, Equipment
 from services.snipeit.catalog import get_models
+from services.snipeit.assets import list_assets, get_asset
 import logging
 
 logger = logging.getLogger(__name__)
+
+def _parse_price(value):
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        v = value.strip()
+        if not v:
+            return None
+        v = v.replace(",", "") # 1,189.90 -> 1189.90
+        try:
+            return float(v)
+        except ValueError:
+            return None
+    return None
 
 def sync_catalog(session: Session) -> dict:
     """
@@ -63,29 +80,47 @@ def list_catalog(session: Session):
     statement = select(EquipmentModel).order_by(EquipmentModel.name)
     return session.exec(statement).all()
 
+def list_equipment_catalog_from_snipeit():
+    paginated = list_assets(limit=500)
+    rows = getattr(paginated, "rows", []) or []
+
+    result = []
+    for a in rows:
+        model = a.get("model") or {}
+        category = a.get("category") or model.get("category") or {}
+        supplier = a.get("supplier") or {}
+        manufacturer = model.get("manufacturer") or {}
+        location = a.get("location") or {}
+
+        result.append({
+            "id": a.get("id"),
+            "name": a.get("name") or model.get("name") or "Unnamed",
+            "category": category.get("name"),
+            "supplier": supplier.get("name") or manufacturer.get("name"),
+            "price": _parse_price(a.get("purchase_cost")),
+            "status": (a.get("status_label") or {}).get("name", "unknown"),
+            "location": location.get("name"),
+        })
+
+    return result
+
 def sync_equipment(session: Session, equipment_id: int) -> Equipment:
-    """
-    Refreshes local Equipment cache with data from Snipe-IT.
-    """
     db_equip = session.get(Equipment, equipment_id)
     if not db_equip or not db_equip.snipeit_asset_id:
         raise ValueError("Valid local equipment mapped to Snipe-IT not found")
-        
-    from services.snipeit.assets import get_asset
+
     snipe_asset = get_asset(db_equip.snipeit_asset_id)
     if not snipe_asset:
-         raise ValueError("Asset not found in Snipe-IT")
-         
-    db_equip.name = snipe_asset.name
-    db_equip.asset_tag = snipe_asset.asset_tag
-    db_equip.serial = snipe_asset.serial
-    if snipe_asset.status_label:
+        raise ValueError("Asset not found in Snipe-IT")
+
+    if getattr(snipe_asset, "status_label", None):
         db_equip.status = snipe_asset.status_label.name.lower()
-    
+
+    db_equip.location = getattr(snipe_asset, "location", None) or db_equip.location
     db_equip.last_synced_at = datetime.now(timezone.utc)
-    
+
     session.add(db_equip)
     session.commit()
     session.refresh(db_equip)
-    
+
     return db_equip

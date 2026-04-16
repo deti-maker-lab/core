@@ -64,3 +64,11 @@ def get_asset(asset_id: int) -> SnipeITAsset:
     """Gets details of a single Snipe-IT asset."""
     response = snipeit_client.get(f"/api/v1/hardware/{asset_id}")
     return SnipeITAsset(**response)
+
+def list_assets(limit: int = 500, offset: int = 0) -> SnipeITPaginatedResponse:
+    """Lists Snipe-IT hardware assets."""
+    response = snipeit_client.get("/api/v1/hardware", params={
+        "limit": limit,
+        "offset": offset,
+    })
+    return SnipeITPaginatedResponse(**response)

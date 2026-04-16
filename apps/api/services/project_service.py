@@ -40,7 +40,7 @@ def get_project(session: Session, project_id: int) -> Project:
 
 def create_project(session: Session, data: dict, created_by: int) -> Project:
     supervisor = session.get(User, data["supervisor_id"])
-    if not supervisor or supervisor.role != "supervisor":
+    if not supervisor or supervisor.role != "professor":
         raise ValueError("Invalid supervisor")
 
     project = Project(
@@ -60,13 +60,15 @@ def create_project(session: Session, data: dict, created_by: int) -> Project:
 
     session.add(ProjectMember(project_id=project.id, user_id=created_by, role="leader"))
 
-    for member_id in data.get("member_ids", []):
-        if member_id == created_by:
+    for m in data.get("members", []):
+        user_id = m["user_id"] if isinstance(m, dict) else m.user_id
+        role = m.get("role", "contributor") if isinstance(m, dict) else m.role
+        if user_id == created_by:
             continue
-        member = session.get(User, member_id)
+        member = session.get(User, user_id)
         if not member:
-            raise ValueError(f"User {member_id} not found")
-        session.add(ProjectMember(project_id=project.id, user_id=member_id, role="member"))
+            raise ValueError(f"User {user_id} not found")
+        session.add(ProjectMember(project_id=project.id, user_id=user_id, role=role))
 
     _add_history(session, project.id, None, "pending", created_by, "Project created")
     session.commit()

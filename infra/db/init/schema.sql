@@ -31,7 +31,7 @@ CREATE TABLE users (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT chk_users_role
-        CHECK (role IN ('student', 'supervisor', 'lab_technician', 'admin'))
+        CHECK (role IN ('student', 'professor', 'lab_technician'))
 );
 
 -- =========================================================
@@ -80,7 +80,7 @@ CREATE TABLE project_members (
     CONSTRAINT uq_project_member UNIQUE (project_id, user_id),
 
     CONSTRAINT chk_project_members_role
-        CHECK (role IN ('leader', 'member', 'supervisor'))
+        CHECK (role IN ('leader', 'contributor', 'observer', 'advisor'))
 );
 
 -- =========================================================
