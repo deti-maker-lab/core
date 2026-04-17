@@ -158,4 +158,3 @@ def return_requisition_assets(
         return usages
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-

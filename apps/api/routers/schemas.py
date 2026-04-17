@@ -44,6 +44,8 @@ class EquipmentUsageRead(BaseModel):
         
 class EquipmentCatalogItemRead(BaseModel):
     id: int
+    model_id: Optional[int] = None
+    model_name: Optional[str] = None
     name: str
     category: Optional[str] = None
     supplier: Optional[str] = None

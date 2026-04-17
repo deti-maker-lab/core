@@ -31,11 +31,32 @@ def list_projects(session: Session) -> List[Project]:
     return session.exec(select(Project).order_by(Project.created_at.desc())).all()
 
 
-def get_project(session: Session, project_id: int) -> Project:
+def get_project(session: Session, project_id: int) -> dict:
+    from sqlmodel import select
+
     project = session.get(Project, project_id)
     if not project:
         raise ValueError("Project not found")
-    return project
+
+    members = session.exec(
+        select(ProjectMember).where(ProjectMember.project_id == project_id)
+    ).all()
+
+    return {
+        "id": project.id,
+        "name": project.name,
+        "description": project.description,
+        "course": project.course,
+        "academic_year": project.academic_year,
+        "group_number": project.group_number,
+        "created_by": project.created_by,
+        "status": project.status,
+        "tags": project.tags,
+        "links": project.links,
+        "approved_at": project.approved_at,
+        "created_at": project.created_at,
+        "members": [{"user_id": m.user_id, "role": m.role} for m in members],
+    }
 
 
 def create_project(session: Session, data: dict, created_by: int) -> Project:

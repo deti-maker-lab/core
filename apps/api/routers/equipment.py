@@ -31,7 +31,8 @@ def _parse_price(value):
 
 @router.get("/catalog", response_model=List[EquipmentCatalogItemRead])
 def get_catalog(session: Session = Depends(get_session), current_user: User = Depends(require_any)):
-    return list_equipment_catalog_from_snipeit()
+    items = list_equipment_catalog_from_snipeit()
+    return items
 
 @router.post("/catalog/sync", status_code=status.HTTP_200_OK)
 def trigger_catalog_sync(session: Session = Depends(get_session), current_user: User = Depends(require_lab_tech)):

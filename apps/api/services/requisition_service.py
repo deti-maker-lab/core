@@ -32,7 +32,7 @@ def _add_history(session: Session, entity_type: str, entity_id: int, old_status:
         note=note
     )
     session.add(history)
-
+    
 
 def create_requisition(session: Session, project_id: int, user_id: int, items_data: List[Dict[str, int]]) -> EquipmentRequest:
     project = session.get(Project, project_id)
@@ -42,41 +42,51 @@ def create_requisition(session: Session, project_id: int, user_id: int, items_da
     req = EquipmentRequest(
         project_id=project_id,
         requested_by=user_id,
-        status=REQ_STATUS_PENDING
+        status="pending"
     )
     session.add(req)
     session.flush()
 
     for item in items_data:
-        model_id = item["model_id"]
-        quantity = item.get("quantity", 1)
+        snipeit_model_id = item["model_id"]
+        quantity = item["quantity"]
 
-        model = session.get(EquipmentModel, model_id)
-        if not model:
-            model = EquipmentModel(
-                id=model_id,
-                name=f"Model #{model_id}",
-                snipeit_model_id=model_id,
+        local_model = session.exec(
+            select(EquipmentModel).where(EquipmentModel.snipeit_model_id == snipeit_model_id)
+        ).first()
+
+        if not local_model:
+            from services.snipeit.catalog import get_models
+            try:
+                all_models = get_models(limit=500)
+                snipe_model = next((r for r in all_models.rows if r.get("id") == snipeit_model_id), None)
+                model_name = snipe_model.get("name", f"Model #{snipeit_model_id}") if snipe_model else f"Model #{snipeit_model_id}"
+            except Exception:
+                model_name = f"Model #{snipeit_model_id}"
+
+            local_model = EquipmentModel(
+                name=model_name,
+                snipeit_model_id=snipeit_model_id,
             )
-            session.add(model)
+            session.add(local_model)
             session.flush()
+            logger.info(f"Created local model for snipeit_model_id={snipeit_model_id}")
 
         req_item = EquipmentRequestItem(
             request_id=req.id,
-            model_id=model_id,
-            quantity=quantity,
+            model_id=local_model.id,
+            quantity=quantity
         )
         session.add(req_item)
 
     try:
-        _add_history(session, "EquipmentRequest", req.id, None, REQ_STATUS_PENDING, user_id, "Requisition created")
+        _add_history(session, "equipment_request", req.id, None, "pending", user_id, "Requisition created")
     except Exception as e:
         logger.warning(f"Could not write status history: {e}")
 
     session.commit()
     session.refresh(req)
     return req
-
 
 def approve_requisition(session: Session, req_id: int, user_id: int) -> EquipmentRequest:
     req = session.get(EquipmentRequest, req_id)
@@ -90,7 +100,7 @@ def approve_requisition(session: Session, req_id: int, user_id: int) -> Equipmen
     req.status = REQ_STATUS_APPROVED
     req.approved_at = datetime.now(timezone.utc)
     
-    _add_history(session, "EquipmentRequest", req.id, old_status, REQ_STATUS_APPROVED, user_id, "Requisition approved")
+    _add_history(session, "equipment_request", req.id, old_status, REQ_STATUS_APPROVED, user_id, "Requisition approved")
     session.commit()
     session.refresh(req)
     return req
@@ -108,7 +118,7 @@ def reject_requisition(session: Session, req_id: int, user_id: int, reason: str)
     req.status = REQ_STATUS_REJECTED
     req.rejection_reason = reason
     
-    _add_history(session, "EquipmentRequest", req.id, old_status, REQ_STATUS_REJECTED, user_id, f"Rejected: {reason}")
+    _add_history(session, "equipment_request", req.id, old_status, REQ_STATUS_REJECTED, user_id, f"Rejected: {reason}")
     session.commit()
     session.refresh(req)
     return req
@@ -185,7 +195,7 @@ def assign_asset_to_requisition(session: Session, req_id: int, req_item_id: int,
     # We should calculate if it is now fully assigned, but for now we set partially assigned
     req.status = REQ_STATUS_PARTIALLY_ASSIGNED 
     
-    _add_history(session, "EquipmentUsage", usage.id, None, USAGE_STATUS_ASSIGNED, user_id, f"Assigned SnipeIT Asset {snipeit_asset_id}")
+    _add_history(session, "equipment_usage", usage.id, None, USAGE_STATUS_ASSIGNED, user_id, f"Assigned SnipeIT Asset {snipeit_asset_id}")
     
     session.commit()
     session.refresh(usage)
@@ -224,7 +234,7 @@ def return_asset(session: Session, usage_id: int, user_id: int, note: str = None
     # Update Equipment
     db_equip.status = "available"
     
-    _add_history(session, "EquipmentUsage", usage.id, USAGE_STATUS_ASSIGNED, USAGE_STATUS_RETURNED, user_id, note)
+    _add_history(session, "equipment_usage", usage.id, USAGE_STATUS_ASSIGNED, USAGE_STATUS_RETURNED, user_id, note)
     
     # Optional: logic to check if all items for the Request are returned, to close the requisition.
     

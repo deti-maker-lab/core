@@ -157,7 +157,10 @@ export default function NewProjectPage() {
       if (equipmentItems.length > 0) {
         await requisitionsApi.create(
           project.id,
-          equipmentItems.map((e) => ({ model_id: e.model.id, quantity: e.quantity }))
+          equipmentItems.map((e) => ({
+            model_id: e.model.model_id ?? e.model.id,
+            quantity: e.quantity,
+          }))
         );
       }
 

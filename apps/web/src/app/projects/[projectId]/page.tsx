@@ -66,30 +66,6 @@ function MemberAvatar({ name, color = "bg-gray-200 text-gray-500" }: { name?: st
   );
 }
 
-// ── Debug panel ──────────────────────────────────────────────────────────────
-
-function DebugPanel({ label, data }: { label: string; data: unknown }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="border border-dashed border-amber-200 rounded-xl overflow-hidden">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-2 bg-amber-50 text-xs font-mono text-amber-600 hover:bg-amber-100 transition-colors"
-      >
-        <span>🔍 DEBUG: {label}</span>
-        <span>{open ? "▲ hide" : "▼ show"}</span>
-      </button>
-      {open && (
-        <pre className="text-xs bg-white p-4 overflow-auto max-h-72 text-gray-700 leading-relaxed">
-          {JSON.stringify(data, null, 2)}
-        </pre>
-      )}
-    </div>
-  );
-}
-
-// ── Page ─────────────────────────────────────────────────────────────────────
-
 export default function ProjectDetailPage() {
   const params = useParams<{ projectId: string }>();
   const projectId = Number(params?.projectId);
@@ -101,50 +77,31 @@ export default function ProjectDetailPage() {
   const [loading, setLoading]           = useState(true);
   const [error, setError]               = useState<string | null>(null);
 
-  // Debug state
-  const [dbgProject, setDbgProject]         = useState<unknown>(null);
-  const [dbgMembers, setDbgMembers]         = useState<unknown>(null);
-  const [dbgUserFetches, setDbgUserFetches] = useState<unknown>(null);
-  const [dbgReqs, setDbgReqs]               = useState<unknown>(null);
-
   useEffect(() => {
     if (!projectId) return;
 
     (async () => {
       try {
-        // 1 — Project
         const proj = await projectsApi.get(projectId);
         setProject(proj);
-        setDbgProject(proj);
-        setDbgMembers(proj.members ?? []);
 
-        // 2 — Fetch all member users in parallel (no supervisor_id — supervisors are in members[])
         const memberIds = [...new Set((proj.members ?? []).map((m) => m.user_id))];
         const userResults = await Promise.allSettled(memberIds.map((id) => usersApi.get(id)));
 
         const map: Record<number, User> = {};
-        const dbgFetches: Record<number, unknown> = {};
         userResults.forEach((r, i) => {
           const id = memberIds[i];
           if (r.status === "fulfilled") {
             map[id] = r.value;
-            dbgFetches[id] = r.value;
-          } else {
-            dbgFetches[id] = { error: r.reason?.message };
-          }
+          } 
         });
         setMemberUsers(map);
-        setDbgUserFetches(dbgFetches);
 
-        // 3 — Requisitions
         const reqs = await requisitionsApi.listByProject(projectId).catch((e) => {
-          setDbgReqs({ error: e.message });
           return [] as RequisitionDetail[];
         });
         setRequisitions(reqs);
-        setDbgReqs(reqs);
 
-        // 4 — Equipment catalog for name lookup
         const cat = await equipmentApi.catalog().catch(() => []);
         const catMap: Record<number, string> = {};
         (cat as any[]).forEach((m) => { catMap[m.id] = m.name; });
@@ -158,7 +115,6 @@ export default function ProjectDetailPage() {
     })();
   }, [projectId]);
 
-  // ── Loading / error states ─────────────────────────────────────────────────
 
   if (loading) return (
     <main className="p-8 bg-white min-h-screen font-sans">
@@ -185,7 +141,6 @@ export default function ProjectDetailPage() {
     </main>
   );
 
-  // ── Derived data ──────────────────────────────────────────────────────────
 
   const supervisorMembers = (project.members ?? []).filter((m) => m.role === "supervisor");
   const teamMembers       = (project.members ?? []).filter((m) => m.role !== "supervisor");
@@ -195,7 +150,6 @@ export default function ProjectDetailPage() {
     year: "numeric", month: "long", day: "numeric",
   });
 
-  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <main className="flex-1 bg-white p-8 min-h-screen font-sans text-gray-800">
@@ -208,15 +162,6 @@ export default function ProjectDetailPage() {
         <ArrowLeft size={18} /> Back
       </Link>
 
-      {/* Debug panels */}
-      <div className="flex flex-col gap-2 mb-8">
-        <DebugPanel label="project (raw)"         data={dbgProject} />
-        <DebugPanel label="members (stubs)"       data={dbgMembers} />
-        <DebugPanel label="user fetches by id"    data={dbgUserFetches} />
-        <DebugPanel label="requisitions"          data={dbgReqs} />
-      </div>
-
-      {/* Title */}
       <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
         <div>
           <div className="flex items-center gap-3 flex-wrap mb-2">
@@ -229,10 +174,8 @@ export default function ProjectDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* ── Left col (2/3) ─────────────────────────────────────────── */}
         <div className="lg:col-span-2 flex flex-col gap-6">
 
-          {/* Project Info */}
           <div className="border border-gray-200 rounded-2xl p-6 shadow-sm">
             <h2 className="text-lg font-bold mb-4">Project Info</h2>
             <InfoRow label="Course"        value={project.course} />
@@ -247,7 +190,6 @@ export default function ProjectDetailPage() {
             )}
           </div>
 
-          {/* Team */}
           <div className="border border-gray-200 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-6">
               <Users size={18} className="text-gray-400" />
@@ -256,7 +198,6 @@ export default function ProjectDetailPage() {
               </h2>
             </div>
 
-            {/* Supervisors */}
             {supervisorMembers.length > 0 && (
               <div className="mb-4">
                 <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-2">
@@ -282,7 +223,6 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {/* Other members */}
             {teamMembers.length > 0 && (
               <div>
                 <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-2">
@@ -365,7 +305,6 @@ export default function ProjectDetailPage() {
           </div>
         </div>
 
-        {/* ── Right col (1/3) ────────────────────────────────────────── */}
         <div className="flex flex-col gap-6">
 
           {tags.length > 0 && (
@@ -402,7 +341,6 @@ export default function ProjectDetailPage() {
             </div>
           )}
 
-          {/* Timeline */}
           <div className="border border-gray-200 rounded-2xl p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <Clock size={16} className="text-gray-400" />
