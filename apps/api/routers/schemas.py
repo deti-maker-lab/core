@@ -156,6 +156,16 @@ class ProjectMemberAdd(BaseModel):
 
 class ProjectStatusUpdate(BaseModel):
     status: str
+    rejection_reason: Optional[str] = None
+
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    course: Optional[str] = None
+    academic_year: Optional[str] = None
+    group_number: Optional[int] = None
+    tags: Optional[str] = None
+    links: Optional[str] = None
 
 # Users
 class UserRead(BaseModel):

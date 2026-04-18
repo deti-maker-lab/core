@@ -18,6 +18,7 @@ from services.snipeit.assets import get_asset, checkout_asset, checkin_asset
 from services.snipeit.users import get_user_by_email
 from services.snipeit.exceptions import SnipeITAPIError, SnipeITAssetUnavailableError
 from services.inventory_service import sync_equipment
+from services.notification_service import notify_project_members
 import logging
 
 logger = logging.getLogger(__name__)
@@ -88,19 +89,54 @@ def create_requisition(session: Session, project_id: int, user_id: int, items_da
     session.refresh(req)
     return req
 
+def _build_req_description(session: Session, req: EquipmentRequest) -> str:
+    """Constrói uma descrição legível dos itens da requisição."""
+    from sqlmodel import select
+    items = session.exec(
+        select(EquipmentRequestItem).where(EquipmentRequestItem.request_id == req.id)
+    ).all()
+
+    model_names = []
+    for item in items:
+        model = session.get(EquipmentModel, item.model_id)
+        name = model.name if model else f"Model #{item.model_id}"
+        qty = f" ×{item.quantity}" if item.quantity > 1 else ""
+        model_names.append(f'"{name}"{qty}')
+
+    project = session.get(Project, req.project_id)
+    project_name = project.name if project else f"Project #{req.project_id}"
+
+    items_str = ", ".join(model_names) if model_names else "requested equipment"
+    return items_str, project_name
+
+
 def approve_requisition(session: Session, req_id: int, user_id: int) -> EquipmentRequest:
     req = session.get(EquipmentRequest, req_id)
     if not req:
         raise ValueError("Requisition not found")
-        
-    if req.status != REQ_STATUS_PENDING:
+    if req.status != "pending":
         raise ValueError("Only pending requisitions can be approved")
-        
+
+    project = session.get(Project, req.project_id)
+    if not project or project.status not in ("approved", "active"):
+        raise ValueError("Cannot approve requisition: project is not approved yet")
+
     old_status = req.status
-    req.status = REQ_STATUS_APPROVED
+    req.status = "approved"
     req.approved_at = datetime.now(timezone.utc)
-    
-    _add_history(session, "equipment_request", req.id, old_status, REQ_STATUS_APPROVED, user_id, "Requisition approved")
+
+    try:
+        _add_history(session, "equipment_request", req.id, old_status, "approved", user_id, "Requisition approved")
+    except Exception as e:
+        logger.warning(f"Status history error: {e}")
+
+    items_str, project_name = _build_req_description(session, req)
+    notify_project_members(session, req.project_id,
+        title="Equipment request approved",
+        message=f"Your equipment request for {items_str} on project \"{project_name}\" was approved. You can pick it up at the lab!",
+        type="approval",
+        reference_type="equipment_request", reference_id=req.id)
+
     session.commit()
     session.refresh(req)
     return req
@@ -110,15 +146,25 @@ def reject_requisition(session: Session, req_id: int, user_id: int, reason: str)
     req = session.get(EquipmentRequest, req_id)
     if not req:
         raise ValueError("Requisition not found")
-        
-    if req.status != REQ_STATUS_PENDING:
+    if req.status != "pending":
         raise ValueError("Only pending requisitions can be rejected")
-        
+
     old_status = req.status
-    req.status = REQ_STATUS_REJECTED
+    req.status = "rejected"
     req.rejection_reason = reason
-    
-    _add_history(session, "equipment_request", req.id, old_status, REQ_STATUS_REJECTED, user_id, f"Rejected: {reason}")
+
+    try:
+        _add_history(session, "equipment_request", req.id, old_status, "rejected", user_id, f"Rejected: {reason}")
+    except Exception as e:
+        logger.warning(f"Status history error: {e}")
+
+    items_str, project_name = _build_req_description(session, req)
+    notify_project_members(session, req.project_id,
+        title="Equipment request rejected",
+        message=f"Your equipment request for {items_str} on project \"{project_name}\" was rejected. Reason: {reason}",
+        type="warning",
+        reference_type="equipment_request", reference_id=req.id)
+
     session.commit()
     session.refresh(req)
     return req

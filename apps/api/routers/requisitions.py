@@ -39,7 +39,7 @@ def _build_detail(session: Session, req: EquipmentRequest) -> dict:
 @router.get("/requisitions", response_model=List[RequisitionReadDetail])
 def list_all_requisitions(
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_lab_tech)
+    current_user: User = Depends(require_any)
 ):
     requisitions = session.exec(
         select(EquipmentRequest).order_by(EquipmentRequest.created_at.desc())
@@ -87,7 +87,7 @@ def create_project_requisition(
 def approve_requisition(
     req_id: int, 
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_lab_tech)
+    current_user: User = Depends(require_any)
 ):
     try:
         return req_svc.approve_requisition(session, req_id, user_id=current_user.id)
@@ -99,7 +99,7 @@ def reject_requisition(
     req_id: int, 
     data: RequisitionReject,
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_lab_tech)
+    current_user: User = Depends(require_any)
 ):
     try:
         return req_svc.reject_requisition(session, req_id, user_id=current_user.id, reason=data.reason)
@@ -111,7 +111,7 @@ def assign_requisition_assets(
     req_id: int, 
     data: RequisitionAssign,
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_lab_tech)
+    current_user: User = Depends(require_any)
 ):
     """
     Binds concrete SnipeIT assets to a specific Requisition.
@@ -140,7 +140,7 @@ def assign_requisition_assets(
 def return_requisition_assets(
     data: RequisitionReturn,
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_lab_tech)
+    current_user: User = Depends(require_any)
 ):
     """
     Returns specific usage records. Checks them back into SnipeIT.

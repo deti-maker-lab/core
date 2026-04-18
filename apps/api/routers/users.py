@@ -50,3 +50,32 @@ def get_requisitions_by_user(
     current_user: User = Depends(require_any),
 ):
     return get_user_requisitions(session, user_id)
+
+@router.get("/me/notifications")
+def get_my_notifications(
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_any)
+):
+    from sqlmodel import select, desc
+    from db.models import Notification
+    notifs = session.exec(
+        select(Notification)
+        .where(Notification.user_id == current_user.id)
+        .order_by(desc(Notification.created_at))
+        .limit(20)
+    ).all()
+    return notifs
+
+@router.post("/me/notifications/{notif_id}/read")
+def mark_notification_read(
+    notif_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_any)
+):
+    from db.models import Notification
+    n = session.get(Notification, notif_id)
+    if not n or n.user_id != current_user.id:
+        raise HTTPException(status_code=404)
+    n.is_read = True
+    session.commit()
+    return {"ok": True}

@@ -7,13 +7,12 @@ from db.database import get_session
 from db.models import User
 from routers.schemas import (
     ProjectCreate, ProjectRead, ProjectReadDetail,
-    ProjectMemberAdd, ProjectStatusUpdate
+    ProjectMemberAdd, ProjectStatusUpdate, ProjectUpdate,
 )
 from auth.dependencies import require_any, require_user, require_lab_tech
 import services.project_service as proj_svc
 
 router = APIRouter(prefix="/projects", tags=["projects"])
-
 
 @router.get("", response_model=List[ProjectRead])
 def list_projects(
@@ -54,6 +53,17 @@ def create_project(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@router.patch("/{project_id}", response_model=ProjectReadDetail)
+def update_project(
+    project_id: int,
+    data: ProjectUpdate,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_user)
+):
+    try:
+        return proj_svc.update_project(session, project_id, data.model_dump(exclude_none=True), current_user.id)
+    except (ValueError, PermissionError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/{project_id}/members", status_code=status.HTTP_201_CREATED)
 def add_member(
@@ -87,14 +97,16 @@ def remove_member(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.patch("/{project_id}/status", response_model=ProjectRead)
+@router.patch("/{project_id}/status", response_model=ProjectReadDetail)
 def update_project_status(
     project_id: int,
     data: ProjectStatusUpdate,
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_lab_tech)
+    current_user: User = Depends(require_any)
 ):
     try:
-        return proj_svc.update_project_status(session, project_id, data.status, current_user.id)
+        return proj_svc.update_project_status(
+            session, project_id, data.status, current_user.id, data.rejection_reason
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

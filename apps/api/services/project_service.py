@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import List
 from sqlmodel import Session, select
 from db.models import Project, ProjectMember, User, StatusHistory
+from services.notification_service import notify, notify_project_members
 import logging
 
 logger = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ def get_project(session: Session, project_id: int) -> dict:
     }
 
 
-def create_project(session: Session, data: dict, created_by: int) -> Project:
+def create_project(session: Session, data: dict, created_by: int) -> dict:
     members_data = data.get("members", [])
     supervisors = [m for m in members_data if m.get("role") == "supervisor"]
     if not supervisors:
@@ -68,7 +69,7 @@ def create_project(session: Session, data: dict, created_by: int) -> Project:
     for sup in supervisors:
         user = session.get(User, sup["user_id"])
         if not user or user.role != "professor":
-            raise ValueError(f"User {sup['user_id']} is not a professor and cannot be supervisor")
+            raise ValueError(f"User {sup['user_id']} is not a professor")
 
     project = Project(
         name=data["name"],
@@ -95,6 +96,11 @@ def create_project(session: Session, data: dict, created_by: int) -> Project:
         if not member:
             raise ValueError(f"User {user_id} not found")
         session.add(ProjectMember(project_id=project.id, user_id=user_id, role=role))
+        notify(session, user_id,
+            title=f"Added to project: {project.name}",
+            message=f"You were added to the project '{project.name}' as {role}.",
+            type="info",
+            reference_type="project", reference_id=project.id)
 
     try:
         _add_history(session, project.id, None, "pending", created_by, "Project created")
@@ -103,7 +109,7 @@ def create_project(session: Session, data: dict, created_by: int) -> Project:
 
     session.commit()
     session.refresh(project)
-    return project
+    return get_project(session, project.id)
 
 
 def add_member(session: Session, project_id: int, user_id: int, requested_by: int) -> None:
@@ -155,7 +161,8 @@ def remove_member(session: Session, project_id: int, user_id: int, requested_by:
     session.commit()
 
 
-def update_project_status(session: Session, project_id: int, new_status: str, changed_by: int) -> Project:
+def update_project_status(session: Session, project_id: int, new_status: str,
+                          changed_by: int, rejection_reason: str = None) -> dict:
     project = session.get(Project, project_id)
     if not project:
         raise ValueError("Project not found")
@@ -166,14 +173,68 @@ def update_project_status(session: Session, project_id: int, new_status: str, ch
 
     old_status = project.status
     project.status = new_status
+
     if new_status == "approved":
         project.approved_at = datetime.now(timezone.utc)
+        notify_project_members(session, project_id,
+            title=f"Project approved: {project.name}",
+            message=f"Your project '{project.name}' has been approved.",
+            type="approval",
+            reference_type="project", reference_id=project_id)
 
-    _add_history(session, project.id, old_status, new_status, changed_by)
+    elif new_status == "rejected":
+        from sqlmodel import select as sel
+        from db.models import EquipmentRequest
+        reqs = session.exec(sel(EquipmentRequest).where(EquipmentRequest.project_id == project_id)).all()
+        for req in reqs:
+            session.delete(req)
+
+        reason_text = rejection_reason or "No reason provided."
+        notify_project_members(session, project_id,
+            title=f"Project rejected: {project.name}",
+            message=f"Your project '{project.name}' was rejected. Reason: {reason_text}",
+            type="warning",
+            reference_type="project", reference_id=project_id)
+
+    elif new_status == "active":
+        notify_project_members(session, project_id,
+            title=f"Project is now active: {project.name}",
+            message=f"Your project '{project.name}' is now active.",
+            type="info",
+            reference_type="project", reference_id=project_id)
+
+    try:
+        _add_history(session, project_id, old_status, new_status, changed_by, rejection_reason)
+    except Exception as e:
+        logger.warning(f"Could not write status history: {e}")
+
     session.commit()
     session.refresh(project)
-    return project
+    return get_project(session, project_id)
 
+def update_project(session: Session, project_id: int, data: dict, requested_by: int) -> dict:
+    project = session.get(Project, project_id)
+    if not project:
+        raise ValueError("Project not found")
+
+    # Só o criador ou membros com role leader podem editar
+    from sqlmodel import select
+    member = session.exec(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == requested_by,
+            ProjectMember.role == "leader"
+        )
+    ).first()
+    if not member and project.created_by != requested_by:
+        raise PermissionError("Only the project leader can edit the project")
+
+    for field, value in data.items():
+        setattr(project, field, value)
+
+    session.commit()
+    session.refresh(project)
+    return get_project(session, project_id)
 
 def list_pending_projects(session: Session) -> List[Project]:
     return session.exec(
