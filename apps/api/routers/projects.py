@@ -25,7 +25,7 @@ def list_projects(
 @router.get("/pending", response_model=List[ProjectRead])
 def list_pending_projects(
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_lab_tech)
+    current_user: User = Depends(require_any)
 ):
     return proj_svc.list_pending_projects(session)
 

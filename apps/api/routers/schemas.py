@@ -47,20 +47,24 @@ class EquipmentCatalogItemRead(BaseModel):
     model_id: Optional[int] = None
     model_name: Optional[str] = None
     name: str
+    asset_tag: Optional[str] = None
+    serial: Optional[str] = None
     category: Optional[str] = None
     supplier: Optional[str] = None
     price: Optional[float] = None
     status: str
+    status_type: Optional[str] = None
     location: Optional[str] = None
     image: Optional[str] = None
+    assigned_to: Optional[str] = None
+    available: Optional[bool] = None 
 
     class Config:
         from_attributes = True
         
 # Requisitions
 class RequisitionItemCreate(BaseModel):
-    model_id: int
-    quantity: int
+    equipment_id: int
 
 class RequisitionCreate(BaseModel):
     items: List[RequisitionItemCreate]
@@ -91,8 +95,7 @@ class RequisitionReturn(BaseModel):
 
 class RequisitionItemRead(BaseModel):
     id: int
-    model_id: int
-    quantity: int
+    equipment_id: Optional[int] = None 
 
     class Config:
         from_attributes = True

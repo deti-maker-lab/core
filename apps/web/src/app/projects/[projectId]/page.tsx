@@ -1,5 +1,6 @@
 "use client";
 
+// apps/web/src/app/projects/[projectId]/page.tsx
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -277,16 +278,16 @@ function RequestEquipmentModal({
   onClose: () => void;
   onSubmitted: () => void;
 }) {
-  const [catalog, setCatalog]           = useState<EquipmentCatalogItem[]>([]);
-  const [selectedId, setSelectedId]     = useState<number | "">("");
-  const [items, setItems]               = useState<{ model: EquipmentCatalogItem; quantity: number }[]>([]);
-  const [loadingCat, setLoadingCat]     = useState(true);
-  const [submitting, setSubmitting]     = useState(false);
-  const [error, setError]               = useState<string | null>(null);
+  const [catalog, setCatalog]       = useState<EquipmentCatalogItem[]>([]);
+  const [selectedId, setSelectedId] = useState<number | "">("");
+  const [items, setItems]           = useState<EquipmentCatalogItem[]>([]);
+  const [loadingCat, setLoadingCat] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError]           = useState<string | null>(null);
 
   useEffect(() => {
     equipmentApi.catalog()
-      .then(setCatalog)
+      .then((cat) => setCatalog(cat.filter((m) => m.available)))
       .catch(() => setError("Failed to load equipment catalog."))
       .finally(() => setLoadingCat(false));
   }, []);
@@ -294,14 +295,9 @@ function RequestEquipmentModal({
   const addItem = () => {
     if (!selectedId) return;
     const model = catalog.find((m) => m.id === selectedId);
-    if (!model || items.find((i) => i.model.id === selectedId)) return;
-    setItems([...items, { model, quantity: 1 }]);
+    if (!model || items.find((i) => i.id === selectedId)) return;
+    setItems([...items, model]);
     setSelectedId("");
-  };
-
-  const updateQty = (id: number, qty: number) => {
-    if (qty < 1) return;
-    setItems(items.map((i) => i.model.id === id ? { ...i, quantity: qty } : i));
   };
 
   const handleSubmit = async () => {
@@ -311,10 +307,7 @@ function RequestEquipmentModal({
     try {
       await requisitionsApi.create(
         projectId,
-        items.map((i) => ({
-          model_id: i.model.model_id ?? i.model.id,
-          quantity: i.quantity,
-        }))
+        items.map((i) => ({ equipment_id: i.id }))
       );
       onSubmitted();
       onClose();
@@ -338,33 +331,23 @@ function RequestEquipmentModal({
             <div className="text-gray-400 text-sm animate-pulse">Loading catalog...</div>
           ) : (
             <>
-              {/* Selected items */}
               {items.map((item) => (
-                <div key={item.model.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                <div key={item.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-white border border-gray-100 rounded-lg">
                       <Cpu size={14} className="text-gray-400" />
                     </div>
-                    <span className="text-sm font-semibold text-gray-800">{item.model.name}</span>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-800">{item.name}</div>
+                      {item.asset_tag && <div className="text-xs text-gray-400">[{item.asset_tag}] — {item.location ?? "no location"}</div>}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateQty(item.model.id, item.quantity - 1)}
-                      className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-lg text-gray-400 hover:bg-gray-100 font-bold"
-                    >−</button>
-                    <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQty(item.model.id, item.quantity + 1)}
-                      className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-lg text-gray-400 hover:bg-gray-100 font-bold"
-                    >+</button>
-                    <button onClick={() => setItems(items.filter((i) => i.model.id !== item.model.id))}>
-                      <X size={15} className="text-gray-300 hover:text-red-400 ml-1" />
-                    </button>
-                  </div>
+                  <button onClick={() => setItems(items.filter((i) => i.id !== item.id))}>
+                    <X size={15} className="text-gray-300 hover:text-red-400 ml-1" />
+                  </button>
                 </div>
               ))}
 
-              {/* Add item */}
               <div className="flex gap-2">
                 <select
                   className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:border-gray-400 transition-colors"
@@ -373,9 +356,11 @@ function RequestEquipmentModal({
                 >
                   <option value="">Select equipment...</option>
                   {catalog
-                    .filter((m) => !items.find((i) => i.model.id === m.id))
+                    .filter((m) => !items.find((i) => i.id === m.id))
                     .map((m) => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
+                      <option key={m.id} value={m.id}>
+                        {m.name} {m.asset_tag ? `[${m.asset_tag}]` : ""} — {m.location ?? "no location"}
+                      </option>
                     ))}
                 </select>
                 <button onClick={addItem} className="p-3 bg-gray-900 text-white rounded-xl hover:bg-gray-700">
@@ -391,9 +376,7 @@ function RequestEquipmentModal({
         </div>
 
         <div className="flex justify-end gap-3 px-8 pb-8">
-          <button onClick={onClose} className="px-6 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50">
-            Cancel
-          </button>
+          <button onClick={onClose} className="px-6 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50">Cancel</button>
           <button
             onClick={handleSubmit}
             disabled={submitting || items.length === 0}
@@ -595,9 +578,10 @@ export default function ProjectDetailPage() {
                       <div key={item.id} className="flex items-center justify-between text-sm bg-white rounded-lg px-3 py-2 border border-gray-100">
                         <div className="flex items-center gap-2">
                           <Cpu size={14} className="text-gray-300" />
-                          <span className="text-gray-700 font-medium">{catalog[item.model_id] ?? `Model #${item.model_id}`}</span>
+                          <span className="text-gray-700 font-medium">
+                            {catalog[item.equipment_id] ?? `Equipment #${item.equipment_id}`}
+                          </span>
                         </div>
-                        <span className="font-semibold text-gray-500 text-xs">×{item.quantity}</span>
                       </div>
                     ))}
                   </div>

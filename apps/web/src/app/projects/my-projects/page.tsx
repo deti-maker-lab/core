@@ -1,5 +1,6 @@
 "use client";
 
+// apps/web/src/app/projects/my-projects/page.tsx
 import { useEffect, useState } from "react";
 import { Search, Plus, Cpu, Folder } from "lucide-react";
 import Link from "next/link";
@@ -190,8 +191,7 @@ function ProjectCard({ project, requisitions }: { project: Project; requisitions
               req.items.map((item) => (
                 <RequisitionRow
                   key={item.id}
-                  modelId={item.model_id}
-                  quantity={item.quantity}
+                  equipmentId={item.equipment_id}
                   status={req.status}
                 />
               ))
@@ -203,25 +203,18 @@ function ProjectCard({ project, requisitions }: { project: Project; requisitions
   );
 }
 
-function RequisitionRow({ modelId, quantity, status }: { modelId: number; quantity: number; status: string }) {
-  const isPending  = status === "pending";
-  const isApproved = status === "approved";
-  const isRejected = status === "rejected";
-
+function RequisitionRow({ equipmentId, status }: { equipmentId: number; status: string }) {
   return (
-    <div className="flex items-center justify-between border-b border-gray-100 last:border-0 pb-3 last:pb-0">
-      <div className="flex items-center gap-3">
-        <div className="text-gray-400"><Cpu size={18} /></div>
-        <div className="text-sm font-bold text-gray-800">Model #{modelId} × {quantity}</div>
+    <div className="flex items-center justify-between text-sm">
+      <div className="flex items-center gap-2">
+        <Cpu size={14} className="text-gray-300" />
+        <span className="text-gray-600">Equipment #{equipmentId}</span>
       </div>
-      <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase ${
-        isPending  ? "bg-white border border-gray-200 text-gray-400 shadow-sm" :
-        isApproved ? "bg-green-50 text-green-600 border border-green-200" :
-        isRejected ? "bg-red-50 text-red-500 border border-red-200" :
-        "bg-gray-100 text-gray-400"
-      }`}>
-        {status}
-      </span>
+      <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full ${
+        status === "approved" ? "bg-green-50 text-green-600" :
+        status === "rejected" ? "bg-red-50 text-red-500" :
+        "bg-gray-100 text-gray-500"
+      }`}>{status}</span>
     </div>
   );
 }

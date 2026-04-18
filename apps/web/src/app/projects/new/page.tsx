@@ -13,7 +13,7 @@ import {
   users as usersApi,
   equipment as equipmentApi,
   type User,
-  type EquipmentModel,
+  type EquipmentCatalogItem,
 } from "@/lib/api";
 
 const MEMBER_ROLES = ["supervisor", "member", "observer", "advisor"];
@@ -24,8 +24,7 @@ interface MemberEntry {
 }
 
 interface EquipmentEntry {
-  model: EquipmentModel;
-  quantity: number;
+  model: EquipmentCatalogItem;
 }
 
 export default function NewProjectPage() {
@@ -34,7 +33,7 @@ export default function NewProjectPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [supervisors, setSupervisors] = useState<User[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
-  const [catalog, setCatalog] = useState<EquipmentModel[]>([]);
+  const [catalog, setCatalog] = useState<EquipmentCatalogItem[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,6 +67,7 @@ export default function NewProjectPage() {
         setSupervisors(allUsers.filter((u) => u.role === "professor"));
         setAvailableUsers(allUsers.filter((u) => u.role === "student" && u.id !== me.id));
         setCatalog(cat);
+        console.log("catalog sample:", cat.slice(0, 3));
       } catch (err: any) {
         if (cancelled) return;
         if (err?.message?.includes("401") || err?.message?.includes("Unauthorized")) {
@@ -121,7 +121,7 @@ export default function NewProjectPage() {
     if (!selectedModelId) return;
     const model = catalog.find((m) => m.id === selectedModelId);
     if (!model || equipmentItems.find((e) => e.model.id === selectedModelId)) return;
-    setEquipmentItems([...equipmentItems, { model, quantity: 1 }]);
+    setEquipmentItems([...equipmentItems, { model }]);  // sem quantity
     setSelectedModelId("");
   };
 
@@ -158,8 +158,7 @@ export default function NewProjectPage() {
         await requisitionsApi.create(
           project.id,
           equipmentItems.map((e) => ({
-            model_id: e.model.model_id ?? e.model.id,
-            quantity: e.quantity,
+            equipment_id: e.model.id,
           }))
         );
       }
@@ -447,24 +446,19 @@ export default function NewProjectPage() {
                   <div className="p-2 bg-white border border-gray-100 rounded-lg text-gray-400">
                     <Cpu size={16} />
                   </div>
-                  <span className="text-sm font-semibold">{e.model.name}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateQuantity(e.model.id, e.quantity - 1)}
-                      className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors text-sm font-bold"
-                    >−</button>
-                    <span className="w-6 text-center text-sm font-semibold">{e.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(e.model.id, e.quantity + 1)}
-                      className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors text-sm font-bold"
-                    >+</button>
+                  <div>
+                    <span className="text-sm font-semibold">{e.model.name}</span>
+                    {e.model.asset_tag && (
+                      <span className="text-xs text-gray-400 ml-2">[{e.model.asset_tag}]</span>
+                    )}
+                    {e.model.location && (
+                      <div className="text-xs text-gray-400">{e.model.location}</div>
+                    )}
                   </div>
-                  <button onClick={() => setEquipmentItems(equipmentItems.filter((x) => x.model.id !== e.model.id))}>
-                    <X size={16} className="text-gray-300 hover:text-red-400 transition-colors" />
-                  </button>
                 </div>
+                <button onClick={() => setEquipmentItems(equipmentItems.filter((x) => x.model.id !== e.model.id))}>
+                  <X size={16} className="text-gray-300 hover:text-red-400 transition-colors" />
+                </button>
               </div>
             ))}
 
@@ -476,9 +470,11 @@ export default function NewProjectPage() {
               >
                 <option value="">Select equipment...</option>
                 {catalog
-                  .filter((m) => !equipmentItems.find((e) => e.model.id === m.id))
+                  .filter((m) => m.available && !equipmentItems.find((e) => e.model.id === m.id))
                   .map((m) => (
-                    <option key={m.id} value={m.id}>{m.name}</option>
+                    <option key={m.id} value={m.id}>
+                      {m.name} {m.asset_tag ? `[${m.asset_tag}]` : ""} — {m.location ?? "no location"}
+                    </option>
                   ))}
               </select>
               <button onClick={addEquipment} className="p-3 bg-gray-900 text-white rounded-xl hover:bg-gray-700 transition-colors">

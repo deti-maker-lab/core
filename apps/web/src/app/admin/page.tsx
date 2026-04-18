@@ -1,5 +1,6 @@
 "use client";
 
+// apps/web/src/app/admin/page.tsx
 import { useState, useEffect, useCallback } from "react";
 import { Folder, Cpu, X, Check, Users, Clock, AlertTriangle } from "lucide-react";
 import Header from "@/app/components/header";
@@ -20,7 +21,7 @@ export default function TechnicianPortal() {
   const [recentActions, setRecentActions]     = useState<Project[]>([]);
   const [projectMembers, setProjectMembers]   = useState<Record<number, number>>({});
   const [projectNames, setProjectNames]       = useState<Record<number, string>>({});
-  const [modelNames, setModelNames]           = useState<Record<number, string>>({});
+  const [equipmentNames, setEquipmentNames]   = useState<Record<number, string>>({});
   const [userNames, setUserNames]             = useState<Record<number, string>>({});
   const [loading, setLoading]                 = useState(true);
 
@@ -41,15 +42,6 @@ export default function TechnicianPortal() {
         equipmentApi.catalog().catch(() => [] as EquipmentCatalogItem[]),
       ]);
 
-      // Nomes dos modelos pelo snipeit model_id → nome
-      const mNames: Record<number, string> = {};
-      catalog.forEach((m) => {
-        if (m.model_id) mNames[m.model_id] = m.name;
-        mNames[m.id] = m.name; // fallback pelo asset id
-      });
-      setModelNames(mNames);
-
-      // Nomes dos projetos
       const pNames: Record<number, string> = {};
       allProjects.forEach((p) => { pNames[p.id] = p.name; });
       setProjectNames(pNames);
@@ -57,7 +49,6 @@ export default function TechnicianPortal() {
       const pending = allProjects.filter((p) => p.status === "pending");
       setPendingProjects(pending);
 
-      // Conta membros dos projetos pendentes
       const memberCounts: Record<number, number> = {};
       await Promise.allSettled(
         pending.map(async (p) => {
@@ -67,11 +58,23 @@ export default function TechnicianPortal() {
       );
       setProjectMembers(memberCounts);
 
-      // Requisições pendentes
       const pendingRequis = allReqs.filter((r) => r.status === "pending");
       setPendingReqs(pendingRequis);
 
-      // Vai buscar os nomes dos utilizadores que fizeram as requisições
+      const allItemIds = [...new Set(pendingRequis.flatMap((r) => r.items.map((i) => i.equipment_id).filter(Boolean)))];
+      const eNames: Record<number, string> = {};
+      await Promise.allSettled(
+        allItemIds.map(async (id) => {
+          try {
+            const asset = await equipmentApi.get(id!);
+            eNames[id!] = asset.name ?? `Equipment #${id}`;
+          } catch {
+            eNames[id!] = `Equipment #${id}`;
+          }
+        })
+      );
+      setEquipmentNames(eNames);
+
       const userIds = [...new Set(pendingRequis.map((r) => r.requested_by))];
       const uNames: Record<number, string> = {};
       await Promise.allSettled(
@@ -82,7 +85,6 @@ export default function TechnicianPortal() {
       );
       setUserNames(uNames);
 
-      // Últimas 10 acções
       const actioned = allProjects
         .filter((p) => ["approved", "rejected", "active"].includes(p.status))
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -254,9 +256,8 @@ export default function TechnicianPortal() {
                                 <Cpu size={12} className="text-gray-400" />
                               </div>
                               <span className="text-gray-700 font-medium">
-                                {modelNames[item.model_id] ?? `Model #${item.model_id}`}
+                                {equipmentNames[item.equipment_id!] ?? `Equipment #${item.equipment_id}`}
                               </span>
-                              <span className="text-gray-400 text-xs">×{item.quantity}</span>
                             </div>
                           ))}
                         </div>

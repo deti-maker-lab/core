@@ -87,26 +87,28 @@ def list_equipment_catalog_from_snipeit():
     result = []
     for a in rows:
         model = a.get("model") or {}
-        category = a.get("category") or model.get("category") or {}
+        category = a.get("category") or {}
         supplier = a.get("supplier") or {}
-        manufacturer = model.get("manufacturer") or {}
         location = a.get("location") or {}
-        image = a.get("image")
-
-        if not isinstance(image, str):
-            image = None
+        status_label = a.get("status_label") or {}
+        assigned_to = a.get("assigned_to")
 
         result.append({
-            "id": a.get("id"),
+            "id": a.get("id"), 
             "model_id": model.get("id"),
             "model_name": model.get("name"),
             "name": a.get("name") or model.get("name") or "Unnamed",
+            "asset_tag": a.get("asset_tag"),
+            "serial": a.get("serial"),
             "category": category.get("name"),
-            "supplier": supplier.get("name") or manufacturer.get("name"),
+            "supplier": supplier.get("name"),
             "price": _parse_price(a.get("purchase_cost")),
-            "status": (a.get("status_label") or {}).get("name", "unknown"),
+            "status": status_label.get("name", "unknown"),
+            "status_type": status_label.get("status_type"),
             "location": location.get("name"),
-            "image": image,
+            "image": a.get("image"),
+            "assigned_to": assigned_to.get("name") if isinstance(assigned_to, dict) else None,
+            "available": status_label.get("status_type") == "deployable" and not assigned_to,
         })
 
     return result

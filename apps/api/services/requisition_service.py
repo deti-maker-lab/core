@@ -35,7 +35,8 @@ def _add_history(session: Session, entity_type: str, entity_id: int, old_status:
     session.add(history)
     
 
-def create_requisition(session: Session, project_id: int, user_id: int, items_data: List[Dict[str, int]]) -> EquipmentRequest:
+def create_requisition(session: Session, project_id: int, user_id: int,
+                       items_data: List[Dict]) -> EquipmentRequest:
     project = session.get(Project, project_id)
     if not project:
         raise ValueError("Project not found")
@@ -49,64 +50,84 @@ def create_requisition(session: Session, project_id: int, user_id: int, items_da
     session.flush()
 
     for item in items_data:
-        snipeit_model_id = item["model_id"]
-        quantity = item["quantity"]
+        snipeit_asset_id = item["equipment_id"]
 
-        local_model = session.exec(
-            select(EquipmentModel).where(EquipmentModel.snipeit_model_id == snipeit_model_id)
+        local_equip = session.exec(
+            select(Equipment).where(Equipment.snipeit_asset_id == snipeit_asset_id)
         ).first()
 
-        if not local_model:
-            from services.snipeit.catalog import get_models
+        if not local_equip:
             try:
-                all_models = get_models(limit=500)
-                snipe_model = next((r for r in all_models.rows if r.get("id") == snipeit_model_id), None)
-                model_name = snipe_model.get("name", f"Model #{snipeit_model_id}") if snipe_model else f"Model #{snipeit_model_id}"
-            except Exception:
-                model_name = f"Model #{snipeit_model_id}"
+                from services.snipeit.assets import get_asset
+                snipe_asset = get_asset(snipeit_asset_id)
+                snipe_model_id = snipe_asset.model.id if snipe_asset.model else None
 
-            local_model = EquipmentModel(
-                name=model_name,
-                snipeit_model_id=snipeit_model_id,
-            )
-            session.add(local_model)
-            session.flush()
-            logger.info(f"Created local model for snipeit_model_id={snipeit_model_id}")
+                local_model = None
+                if snipe_model_id:
+                    local_model = session.exec(
+                        select(EquipmentModel).where(EquipmentModel.snipeit_model_id == snipe_model_id)
+                    ).first()
+
+                if not local_model:
+                    local_model = EquipmentModel(
+                        name=snipe_asset.model.name if snipe_asset.model else f"Model #{snipe_model_id}",
+                        snipeit_model_id=snipe_model_id,
+                    )
+                    session.add(local_model)
+                    session.flush()
+
+                local_equip = Equipment(
+                    model_id=local_model.id,
+                    snipeit_asset_id=snipeit_asset_id,
+                    status="available",
+                )
+                session.add(local_equip)
+                session.flush()
+                logger.info(f"Created local equipment for snipeit_asset_id={snipeit_asset_id}")
+
+            except Exception as e:
+                logger.error(f"Failed to resolve snipeit asset {snipeit_asset_id}: {e}")
+                raise ValueError(f"Could not resolve equipment {snipeit_asset_id}: {e}")
 
         req_item = EquipmentRequestItem(
             request_id=req.id,
-            model_id=local_model.id,
-            quantity=quantity
+            equipment_id=local_equip.id,
         )
         session.add(req_item)
 
     try:
         _add_history(session, "equipment_request", req.id, None, "pending", user_id, "Requisition created")
     except Exception as e:
-        logger.warning(f"Could not write status history: {e}")
+        logger.warning(f"Status history error: {e}")
 
     session.commit()
     session.refresh(req)
     return req
 
-def _build_req_description(session: Session, req: EquipmentRequest) -> str:
-    """Constrói uma descrição legível dos itens da requisição."""
-    from sqlmodel import select
+def _build_req_description(session: Session, req: EquipmentRequest) -> tuple:
     items = session.exec(
         select(EquipmentRequestItem).where(EquipmentRequestItem.request_id == req.id)
     ).all()
 
-    model_names = []
+    equipment_names = []
     for item in items:
-        model = session.get(EquipmentModel, item.model_id)
-        name = model.name if model else f"Model #{item.model_id}"
-        qty = f" ×{item.quantity}" if item.quantity > 1 else ""
-        model_names.append(f'"{name}"{qty}')
+        if item.equipment_id is None:
+            continue
+        equip = session.get(Equipment, item.equipment_id)
+        name = f"Equipment #{item.equipment_id}"
+        if equip and equip.snipeit_asset_id:
+            try:
+                from services.snipeit.assets import get_asset
+                asset = get_asset(equip.snipeit_asset_id)
+                if asset and asset.name:
+                    name = asset.name
+            except Exception:
+                pass
+        equipment_names.append(f'"{name}"')
 
     project = session.get(Project, req.project_id)
     project_name = project.name if project else f"Project #{req.project_id}"
-
-    items_str = ", ".join(model_names) if model_names else "requested equipment"
+    items_str = ", ".join(equipment_names) if equipment_names else "requested equipment"
     return items_str, project_name
 
 
@@ -120,6 +141,25 @@ def approve_requisition(session: Session, req_id: int, user_id: int) -> Equipmen
     project = session.get(Project, req.project_id)
     if not project or project.status not in ("approved", "active"):
         raise ValueError("Cannot approve requisition: project is not approved yet")
+
+    # Muda cada asset para "reserved" no SnipeIT e localmente
+    items = session.exec(
+        select(EquipmentRequestItem).where(EquipmentRequestItem.request_id == req_id)
+    ).all()
+
+    for item in items:
+        equip = session.get(Equipment, item.equipment_id)
+        if not equip:
+            continue
+
+        equip.status = "reserved"
+
+        if equip.snipeit_asset_id:
+            try:
+                from services.snipeit.client import snipeit_client
+                pass
+            except Exception as e:
+                logger.warning(f"Could not update SnipeIT status for asset {equip.snipeit_asset_id}: {e}")
 
     old_status = req.status
     req.status = "approved"

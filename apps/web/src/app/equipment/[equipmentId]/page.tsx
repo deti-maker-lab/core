@@ -116,7 +116,6 @@ export default function EquipmentDetailsPage() {
               </div>
       )}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left */}
         <div className="flex flex-col gap-6">
           <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
             <div className="h-64 bg-gray-50 flex items-center justify-center border-b border-gray-100 overflow-hidden">
@@ -160,7 +159,6 @@ export default function EquipmentDetailsPage() {
           </div>
         </div>
 
-        {/* Right (placeholder até ligares endpoints reais) */}
         <div className="flex flex-col gap-6">
           <div className="border border-gray-200 rounded-2xl p-6 shadow-sm">
             <h2 className="text-lg font-bold mb-6">Projects With This Equipment (0)</h2>

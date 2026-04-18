@@ -6,6 +6,7 @@ from typing import List
 from db.database import get_session
 from db.models import User, EquipmentRequest, EquipmentRequestItem
 from routers.schemas import RequisitionReadDetail, RequisitionItemRead
+from datetime import datetime
 
 from routers.schemas import (
     RequisitionCreate, 
@@ -33,7 +34,7 @@ def _build_detail(session: Session, req: EquipmentRequest) -> dict:
         "rejection_reason": req.rejection_reason,
         "approved_at": req.approved_at,
         "created_at": req.created_at,
-        "items": [{"id": i.id, "model_id": i.model_id, "quantity": i.quantity} for i in items]
+        "items": [{"id": i.id, "equipment_id": i.equipment_id} for i in items]  # ← era model_id e quantity
     }
 
 @router.get("/requisitions", response_model=List[RequisitionReadDetail])
@@ -157,4 +158,17 @@ def return_requisition_assets(
             usages.append(usage)
         return usages
     except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    
+@router.post("/requisitions/{req_id}/checkout")
+def checkout_requisition(
+    req_id: int,
+    expected_checkin: datetime,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(require_any)
+):
+    try:
+        return req_svc.checkout_requisition(session, req_id, current_user.id, expected_checkin)
+    except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

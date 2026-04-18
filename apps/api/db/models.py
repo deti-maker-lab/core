@@ -103,8 +103,7 @@ class EquipmentRequestItem(SQLModel, table=True):
 
     id: Optional[int] = Field(default=None, primary_key=True, sa_type=BigInteger)
     request_id: int = Field(foreign_key="equipment_request.id", sa_type=BigInteger)
-    model_id: int = Field(foreign_key="equipment_models.id", sa_type=BigInteger)
-    quantity: int = Field()
+    equipment_id: int = Field(foreign_key="equipment.id", sa_type=BigInteger)
 
 # =========================================================
 # EQUIPMENT USAGE

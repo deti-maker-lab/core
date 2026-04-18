@@ -59,7 +59,6 @@ export default function Header() {
     <div className="flex justify-end items-center gap-4 mb-6 text-gray-400">
       {user ? (
         <>
-          {/* Bell with notification panel */}
           <div className="relative" ref={panelRef}>
             <button
               onClick={() => setOpen((v) => !v)}
