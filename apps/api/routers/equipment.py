@@ -91,3 +91,37 @@ def refresh_local_equipment(equipment_id: int, session: Session = Depends(get_se
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/{equipment_id}/projects")
+def get_equipment_projects(
+    equipment_id: int,
+    current_user: User = Depends(require_any),
+    session: Session = Depends(get_session)
+):
+    from sqlmodel import select
+    from db.models import Equipment as EquipmentModel, EquipmentUsage, Project
+
+    equip = session.exec(
+        select(EquipmentModel).where(EquipmentModel.snipeit_asset_id == equipment_id)
+    ).first()
+
+    if not equip:
+        return []
+
+    usages = session.exec(
+        select(EquipmentUsage).where(EquipmentUsage.equipment_id == equip.id)
+    ).all()
+
+    project_ids = list({u.project_id for u in usages})
+
+    projects = []
+    for pid in project_ids:
+        proj = session.get(Project, pid)
+        if proj:
+            projects.append({
+                "id": proj.id,
+                "name": proj.name,
+                "status": proj.status,
+                "course": proj.course,
+            })
+
+    return projects

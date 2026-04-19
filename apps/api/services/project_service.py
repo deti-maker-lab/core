@@ -10,8 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 ALLOWED_TRANSITIONS = {
-    "pending":  ["approved", "rejected"],
-    "approved": ["active", "archived"],
+    "pending":  ["active", "rejected"],
     "active":   ["completed", "archived"],
 }
 

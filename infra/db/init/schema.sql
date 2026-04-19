@@ -1,3 +1,5 @@
+-- infra/db/init/schema.sql
+
 -- =========================================================
 -- DETI Maker Lab - PostgreSQL schema
 -- =========================================================
@@ -29,7 +31,6 @@ CREATE TABLE users (
     course VARCHAR(200),
     academic_year VARCHAR(20),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     CONSTRAINT chk_users_role
         CHECK (role IN ('student', 'professor', 'lab_technician'))
 );
@@ -45,21 +46,17 @@ CREATE TABLE projects (
     academic_year VARCHAR(20),
     group_number INTEGER,
     created_by BIGINT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'draft',
+    status VARCHAR(50) NOT NULL DEFAULT 'pending',
     tags TEXT,
     links TEXT,
     approved_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     CONSTRAINT fk_projects_created_by
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
-
-    CONSTRAINT fk_projects_supervisor
-        FOREIGN KEY (supervisor_id) REFERENCES users(id) ON DELETE RESTRICT,
-
     CONSTRAINT chk_projects_status
-        CHECK (status IN ('draft', 'pending', 'approved', 'rejected', 'active', 'completed', 'archived'))
+        CHECK (status IN ('pending', 'active', 'rejected', 'completed', 'archived'))
 );
+
 
 -- =========================================================
 -- PROJECT MEMBERS
@@ -69,19 +66,14 @@ CREATE TABLE project_members (
     project_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'member',
-
     CONSTRAINT fk_project_members_project
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-
     CONSTRAINT fk_project_members_user
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-
     CONSTRAINT uq_project_member UNIQUE (project_id, user_id),
-
     CONSTRAINT chk_project_members_role
-        CHECK (role IN ('leader', 'contributor', 'observer', 'advisor', 'supervisor'))
+        CHECK (role IN ('leader', 'member', 'observer', 'advisor', 'supervisor'))
 );
-
 -- =========================================================
 -- EQUIPMENT MODELS
 -- =========================================================
@@ -104,20 +96,14 @@ CREATE TABLE equipment (
     id BIGSERIAL PRIMARY KEY,
     model_id BIGINT NOT NULL,
     snipeit_asset_id BIGINT UNIQUE,
-    name VARCHAR(150),
-    asset_tag VARCHAR(100),
-    serial VARCHAR(100),
     location VARCHAR(150),
     status VARCHAR(50) NOT NULL DEFAULT 'available',
     condition VARCHAR(50),
     last_synced_at TIMESTAMP,
-
     CONSTRAINT fk_equipment_model
         FOREIGN KEY (model_id) REFERENCES equipment_models(id) ON DELETE RESTRICT,
-
     CONSTRAINT chk_equipment_status
         CHECK (status IN ('available', 'reserved', 'checked_out', 'maintenance', 'retired')),
-
     CONSTRAINT chk_equipment_condition
         CHECK (condition IN ('new', 'good', 'fair', 'damaged', 'unusable'))
 );
@@ -133,15 +119,12 @@ CREATE TABLE equipment_request (
     rejection_reason TEXT,
     approved_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     CONSTRAINT fk_equipment_request_project
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-
     CONSTRAINT fk_equipment_request_user
         FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE RESTRICT,
-
     CONSTRAINT chk_equipment_request_status
-        CHECK (status IN ('pending', 'approved', 'rejected', 'partially_fulfilled', 'fulfilled', 'cancelled'))
+        CHECK (status IN ('pending', 'reserved', 'rejected', 'partially_fulfilled', 'fulfilled', 'cancelled'))
 );
 
 -- =========================================================
@@ -150,17 +133,11 @@ CREATE TABLE equipment_request (
 CREATE TABLE equipment_request_items (
     id BIGSERIAL PRIMARY KEY,
     request_id BIGINT NOT NULL,
-    model_id BIGINT NOT NULL,
-    quantity INTEGER NOT NULL,
-
+    equipment_id BIGINT,  -- snipeit_asset_id do equipment local
     CONSTRAINT fk_equipment_request_items_request
         FOREIGN KEY (request_id) REFERENCES equipment_request(id) ON DELETE CASCADE,
-
-    CONSTRAINT fk_equipment_request_items_model
-        FOREIGN KEY (model_id) REFERENCES equipment_models(id) ON DELETE RESTRICT,
-
-    CONSTRAINT chk_equipment_request_items_quantity
-        CHECK (quantity > 0)
+    CONSTRAINT fk_equipment_request_items_equipment
+        FOREIGN KEY (equipment_id) REFERENCES equipment(id) ON DELETE RESTRICT
 );
 
 -- =========================================================
@@ -178,23 +155,16 @@ CREATE TABLE equipment_usage (
     asset_name_snapshot VARCHAR(150),
     asset_tag_snapshot VARCHAR(100),
     model_name_snapshot VARCHAR(200),
-
     CONSTRAINT fk_equipment_usage_equipment
         FOREIGN KEY (equipment_id) REFERENCES equipment(id) ON DELETE RESTRICT,
-
     CONSTRAINT fk_equipment_usage_project
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-
     CONSTRAINT fk_equipment_usage_request_item
         FOREIGN KEY (request_item_id) REFERENCES equipment_request_items(id) ON DELETE SET NULL,
-
     CONSTRAINT chk_equipment_usage_status
         CHECK (status IN ('checked_out', 'returned', 'overdue', 'lost')),
-
     CONSTRAINT chk_equipment_usage_dates
-        CHECK (
-            due_at IS NULL OR due_at >= checked_out_at
-        )
+        CHECK (due_at IS NULL OR due_at >= checked_out_at)
 );
 
 -- =========================================================
@@ -209,10 +179,8 @@ CREATE TABLE status_history (
     changed_by BIGINT NOT NULL,
     changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     note TEXT,
-
     CONSTRAINT fk_status_history_user
         FOREIGN KEY (changed_by) REFERENCES users(id) ON DELETE RESTRICT,
-
     CONSTRAINT chk_status_history_entity_type
         CHECK (entity_type IN ('project', 'equipment_request', 'equipment_usage', 'equipment'))
 );
@@ -230,45 +198,30 @@ CREATE TABLE notifications (
     reference_id BIGINT,
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
     CONSTRAINT fk_notifications_user
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-
     CONSTRAINT chk_notifications_type
         CHECK (type IN ('info', 'warning', 'request', 'approval', 'return', 'reminder')),
-
     CONSTRAINT chk_notifications_reference_type
-        CHECK (
-            reference_type IS NULL OR
-            reference_type IN ('project', 'equipment_request', 'equipment_usage', 'equipment')
-        )
+        CHECK (reference_type IS NULL OR
+               reference_type IN ('project', 'equipment_request', 'equipment_usage', 'equipment'))
 );
 
 -- =========================================================
 -- INDEXES
 -- =========================================================
 CREATE INDEX idx_projects_created_by ON projects(created_by);
-CREATE INDEX idx_projects_supervisor_id ON projects(supervisor_id);
 CREATE INDEX idx_project_members_project_id ON project_members(project_id);
 CREATE INDEX idx_project_members_user_id ON project_members(user_id);
-
 CREATE INDEX idx_equipment_model_id ON equipment(model_id);
 CREATE INDEX idx_equipment_status ON equipment(status);
-
 CREATE INDEX idx_equipment_request_project_id ON equipment_request(project_id);
 CREATE INDEX idx_equipment_request_requested_by ON equipment_request(requested_by);
 CREATE INDEX idx_equipment_request_status ON equipment_request(status);
-
 CREATE INDEX idx_equipment_request_items_request_id ON equipment_request_items(request_id);
-CREATE INDEX idx_equipment_request_items_model_id ON equipment_request_items(model_id);
-
 CREATE INDEX idx_equipment_usage_equipment_id ON equipment_usage(equipment_id);
 CREATE INDEX idx_equipment_usage_project_id ON equipment_usage(project_id);
-CREATE INDEX idx_equipment_usage_request_item_id ON equipment_usage(request_item_id);
 CREATE INDEX idx_equipment_usage_status ON equipment_usage(status);
-
 CREATE INDEX idx_status_history_entity ON status_history(entity_type, entity_id);
-CREATE INDEX idx_status_history_changed_by ON status_history(changed_by);
-
 CREATE INDEX idx_notifications_user_id ON notifications(user_id);
 CREATE INDEX idx_notifications_is_read ON notifications(is_read);

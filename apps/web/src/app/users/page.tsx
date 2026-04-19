@@ -1,15 +1,12 @@
-// apps/web/src/app/users/page.tsx
-
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search } from "lucide-react";
+import { Search, Mail } from "lucide-react";
 import Link from "next/link";
 import Header from "@/app/components/header";
 import { users as usersApi, type User } from "@/lib/api";
 
-
-const filterOptions = ["All", "Students", "Professors", "Tecnician"];
+const filterOptions = ["All", "Students", "Professors", "Technician"];
 
 export default function UsersPage() {
   const [userList, setUserList] = useState<User[]>([]);
@@ -40,43 +37,36 @@ export default function UsersPage() {
   });
 
   return (
-    <main className="flex-1 p-8 bg-white min-h-screen font-sans text-gray-800">
-      
-      {/* Top Header */}
+    <main className="flex-1 p-8 bg-[#f4f5f7] min-h-screen font-sans text-gray-900">
       <Header />
 
-      {/* Header Titles */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-1">Users</h1>
-        <p className="text-gray-400 font-medium">
+      <div className="mb-6">
+        <h1 className="text-[32px] font-bold text-gray-900 mb-1">Users</h1>
+        <p className="text-gray-500 font-medium">
           {loading ? "Loading..." : `${userList.length} lab participants`}
         </p>
       </div>
 
-      {/* Search Bar and Category Filters */}
-      <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-4">
-        
-        {/* Search Input */}
-        <div className="flex items-center border border-gray-200 rounded-full px-5 py-2.5 w-full max-w-md shadow-sm focus-within:border-gray-300 transition-all">
-          <Search size={18} className="text-gray-400" />
+      <div className="flex flex-col md:flex-row items-center gap-3 mb-8">
+        <div className="relative flex-1 w-full max-w-2xl">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
-            className="ml-3 outline-none w-full text-sm bg-transparent placeholder:text-gray-300"
-            placeholder="search by name, email or nmec..."
+            className="w-full pl-11 pr-4 py-2.5 bg-[#eceef1] border-none rounded-xl outline-none text-sm text-gray-600 placeholder:text-gray-400"
+            placeholder="Search by name, email or nmec..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        {/* Filter Buttons */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto">
+        <div className="flex items-center bg-[#eceef1] p-1 rounded-xl overflow-x-auto w-full md:w-auto">
           {filterOptions.map((option) => (
             <button
               key={option}
               onClick={() => setActiveFilter(option)}
-              className={`px-5 py-2 rounded-xl text-sm whitespace-nowrap transition-all ${
+              className={`px-4 py-1.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${
                 activeFilter === option
-                  ? "bg-white border border-gray-300 text-gray-900 shadow-sm font-semibold"
-                  : "text-gray-400 hover:text-gray-600 font-medium"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
             >
               {option}
@@ -85,44 +75,52 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* Loading */}
-      {loading && (
-        <div className="flex justify-center py-24">
-          <p className="text-gray-300 font-medium">Loading users...</p>
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl p-6 h-32 animate-pulse" />
+          ))}
         </div>
-      )}
-
-      {/* Users Grid */}
-      {!loading && filteredUsers.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredUsers.map((user) => (
             <Link
               key={user.id}
               href={`/users/${user.id}`}
-              className="group border border-gray-200 rounded-3xl p-6 flex items-start gap-5 hover:border-gray-300 hover:shadow-md transition-all cursor-pointer bg-white"
+              className="group bg-white border border-transparent rounded-2xl p-5 flex items-start gap-4 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer"
             >
-              {/* Avatar */}
-              <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center shrink-0 text-gray-400 font-bold text-xl group-hover:bg-gray-200 transition-colors">
+              <div className="w-12 h-12 bg-[#eceef1] rounded-xl flex items-center justify-center shrink-0 text-gray-500 font-bold text-[18px] group-hover:bg-[#e0e7ff] group-hover:text-[#4F46E5] transition-colors">
                 {user.name.charAt(0).toUpperCase()}
               </div>
 
-              {/* Info */}
-              <div className="flex flex-col gap-1 overflow-hidden">
-                <h3 className="font-bold text-gray-900 text-lg truncate group-hover:text-blue-600 transition-colors">
-                  {user.name}
-                </h3>
-                <p className="text-sm text-gray-400 truncate font-medium">
+              <div className="flex flex-col gap-1 overflow-hidden w-full">
+                <div className="flex justify-between items-start gap-2">
+                  <h3 className="font-bold text-gray-900 text-[16px] truncate group-hover:text-[#4F46E5] transition-colors">
+                    {user.name}
+                  </h3>
+                  <span className={`shrink-0 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md ${
+                    user.role === 'professor' ? 'bg-purple-50 text-purple-600' :
+                    user.role === 'lab_technician' ? 'bg-emerald-50 text-emerald-600' :
+                    'bg-indigo-50 text-indigo-600'
+                  }`}>
+                    {user.role === 'lab_technician' ? 'Staff' : user.role}
+                  </span>
+                </div>
+                
+                <p className="flex items-center gap-1.5 text-[13px] text-gray-400 truncate font-medium">
+                  <Mail size={12} className="shrink-0" />
                   {user.email}
                 </p>
-                <p className="text-sm text-gray-300 font-bold mb-3 tracking-wide">
-                  {user.nmec ?? "—"}
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="inline-block px-3 py-1 bg-gray-50 border border-gray-100 text-gray-400 text-[10px] font-bold uppercase rounded-full">
-                    {user.role}
-                  </span>
+                
+                {user.role === 'student' && user.nmec && (
+                  <p className="text-[12px] text-gray-400 font-bold tracking-tight">
+                    {user.nmec}
+                  </p>
+                )}
+                
+                <div className="flex items-center gap-2 mt-1">
                   {user.course && (
-                    <span className="inline-block px-3 py-1 bg-gray-50 border border-gray-100 text-gray-400 text-[10px] font-medium rounded-full truncate max-w-[120px]">
+                    <span className="inline-block px-2.5 py-1 bg-gray-50 border border-gray-100 text-gray-500 text-[10px] font-bold rounded-md truncate max-w-full uppercase">
                       {user.course}
                     </span>
                   )}
@@ -133,21 +131,12 @@ export default function UsersPage() {
         </div>
       )}
 
-      {/* Empty State */}
       {!loading && filteredUsers.length === 0 && (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="bg-gray-50 p-4 rounded-full mb-4">
-            <Search size={32} className="text-gray-200" />
+          <div className="bg-[#eceef1] p-4 rounded-full mb-4">
+            <Search size={32} className="text-gray-400" />
           </div>
-          <p className="text-gray-400 font-medium">
-            No lab participants found matching your criteria.
-          </p>
-          <button
-            onClick={() => { setSearchQuery(""); setActiveFilter("All"); }}
-            className="mt-4 text-sm font-bold text-gray-900 underline underline-offset-4"
-          >
-            Clear all filters
-          </button>
+          <p className="text-gray-400 font-medium">No results found.</p>
         </div>
       )}
     </main>

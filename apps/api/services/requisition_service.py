@@ -139,10 +139,9 @@ def approve_requisition(session: Session, req_id: int, user_id: int) -> Equipmen
         raise ValueError("Only pending requisitions can be approved")
 
     project = session.get(Project, req.project_id)
-    if not project or project.status not in ("approved", "active"):
+    if not project or project.status not in ("active"):
         raise ValueError("Cannot approve requisition: project is not approved yet")
 
-    # Muda cada asset para "reserved" no SnipeIT e localmente
     items = session.exec(
         select(EquipmentRequestItem).where(EquipmentRequestItem.request_id == req_id)
     ).all()
@@ -162,7 +161,7 @@ def approve_requisition(session: Session, req_id: int, user_id: int) -> Equipmen
                 logger.warning(f"Could not update SnipeIT status for asset {equip.snipeit_asset_id}: {e}")
 
     old_status = req.status
-    req.status = "approved"
+    req.status = "reserved"
     req.approved_at = datetime.now(timezone.utc)
 
     try:

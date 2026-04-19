@@ -25,6 +25,7 @@ function StatusBadge({ status }: { status: string }) {
     pending:   "bg-yellow-50 text-yellow-600 border-yellow-200",
     rejected:  "bg-red-50 text-red-500 border-red-200",
     completed: "bg-blue-50 text-blue-600 border-blue-200",
+    reserved:  "bg-purple-50 text-purple-600 border-purple-200",
     archived:  "bg-gray-100 text-gray-500 border-gray-200",
     approved:  "bg-teal-50 text-teal-600 border-teal-200",
   };
