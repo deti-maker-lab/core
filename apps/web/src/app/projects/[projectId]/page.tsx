@@ -458,7 +458,7 @@ export default function ProjectDetailPage() {
   const isMember = currentUserId !== null && (project.members ?? []).some((m) => m.user_id === currentUserId);
 
   return (
-    <main className="flex-1 bg-white p-8 min-h-screen font-sans text-gray-800">
+    <main className="flex-1 bg-[#f4f5f7] p-8 min-h-screen font-sans text-gray-900">
       <Header />
 
       <Link href="/projects" className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mb-8 text-sm font-medium">

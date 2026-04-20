@@ -11,6 +11,7 @@ import {
   type RequisitionDetail,
   type EquipmentCatalogItem,
 } from "@/lib/api";
+import Header from "@/app/components/header";
 
 export default function TechnicianPortal() {
   const [pendingProjects, setPendingProjects] = useState<Project[]>([]);
@@ -117,7 +118,9 @@ export default function TechnicianPortal() {
     pendingProjects.some((p) => p.id === req.project_id);
 
   return (
-    <main className="flex-1 bg-gray-50 p-8 min-h-screen font-sans text-gray-800 relative">
+    <main className="flex-1 p-8 bg-[#f4f5f7] min-h-screen font-sans text-gray-900">
+      <Header/>
+
       <div className="mb-10">
         <h1 className="text-3xl font-bold mb-2">Technician Portal</h1>
         <p className="text-gray-500 font-medium">Manage lab inventory and review project proposals</p>
@@ -128,7 +131,6 @@ export default function TechnicianPortal() {
       ) : (
         <div className="flex flex-col gap-10">
 
-          {/* Pending Projects */}
           <section>
             <div className="flex items-center gap-3 mb-4">
               <Folder size={24} className="text-gray-600" />
@@ -194,7 +196,6 @@ export default function TechnicianPortal() {
             )}
           </section>
 
-          {/* Pending Equipment Requests */}
           <section>
             <div className="flex items-center gap-3 mb-4">
               <Cpu size={24} className="text-gray-600" />
@@ -270,7 +271,6 @@ export default function TechnicianPortal() {
             )}
           </section>
 
-          {/* Recently Actioned */}
           <section>
             <h2 className="text-lg font-bold mb-4">Recently Actioned</h2>
             {recentActions.length === 0 ? (
@@ -299,7 +299,6 @@ export default function TechnicianPortal() {
         </div>
       )}
 
-      {/* Confirm Modal */}
       {confirmModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white w-full max-w-md rounded-[24px] p-8 shadow-xl">

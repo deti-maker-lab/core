@@ -16,8 +16,7 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 @router.get("", response_model=List[ProjectRead])
 def list_projects(
-    session: Session = Depends(get_session),
-    current_user: User = Depends(require_any)
+    session: Session = Depends(get_session)
 ):
     return proj_svc.list_projects(session)
 
@@ -25,7 +24,6 @@ def list_projects(
 @router.get("/pending", response_model=List[ProjectRead])
 def list_pending_projects(
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_any)
 ):
     return proj_svc.list_pending_projects(session)
 
@@ -34,7 +32,6 @@ def list_pending_projects(
 def get_project(
     project_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_any)
 ):
     try:
         return proj_svc.get_project(session, project_id)

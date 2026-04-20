@@ -8,6 +8,7 @@ import {
   DollarSign, Hash, MapPin, CheckCircle2, FolderOpen,
 } from "lucide-react";
 import { equipment as equipmentApi } from "@/lib/api";
+import Header from "@/app/components/header";
 
 type EquipmentDetail = {
   id: number;
@@ -81,7 +82,9 @@ export default function EquipmentDetailsPage() {
   };
 
   return (
-    <main className="flex-1 bg-white p-8 min-h-screen font-sans text-gray-800">
+    <main className="flex-1 bg-[#f4f5f7] p-8 min-h-screen font-sans text-gray-900">
+      <Header />
+      
       <Link
         href="/equipment"
         className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mb-8 text-sm font-medium"

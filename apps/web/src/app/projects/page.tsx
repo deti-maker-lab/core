@@ -8,7 +8,7 @@ import { projects as projectsApi } from "@/lib/api";
 import type { Project } from "@/lib/api";
 import Header from "@/app/components/header";
 
-const STATUS_FILTERS = ["All", "Active", "Completed", "On Hold"];
+const STATUS_FILTERS = ["All", "Pending", "Active", "Completed", "Rejected"];
 
 function getStatusStyles(status: string) {
   const s = status.toLowerCase();
@@ -49,7 +49,6 @@ export default function ProjectsPage() {
     <main className="flex-1 bg-[#f4f5f7] p-8 min-h-screen font-sans text-gray-900">
       <Header />
 
-      {/* Page Title & Actions */}
       <div className="flex justify-between items-end mb-6">
         <div>
           <h1 className="text-[32px] font-bold text-gray-900 mb-1">Projects</h1>
@@ -71,7 +70,6 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {/* Control Bar - Igual ao dos Equipamentos */}
       <div className="flex items-center gap-3 mb-6">
         <div className="relative flex-1 max-w-3xl">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -104,7 +102,6 @@ export default function ProjectsPage() {
         <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{filtered.length} results</span>
       </div>
 
-      {/* Projects List */}
       {loading ? (
         <div className="flex flex-col gap-3">
           {[...Array(4)].map((_, i) => (
@@ -127,7 +124,6 @@ export default function ProjectsPage() {
                 href={`/projects/${proj.id}`}
                 className="group border border-transparent hover:border-gray-200 bg-white rounded-xl p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 transition-all"
               >
-                {/* Left Side: Info */}
                 <div className="flex flex-col gap-1.5 flex-1 min-w-0">
                   <div className="flex items-center gap-3 flex-wrap">
                     <h3 className="font-bold text-gray-900 text-[15px] truncate max-w-sm">
@@ -157,7 +153,6 @@ export default function ProjectsPage() {
                   </p>
                 </div>
 
-                {/* Right Side: Meta & Actions */}
                 <div className="flex items-center gap-6 xl:gap-8 shrink-0">
                   <span className="hidden lg:block text-sm text-gray-400 font-medium">
                     {/* Placeholder para supervisor caso não venha na API */}

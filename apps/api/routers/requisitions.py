@@ -51,7 +51,6 @@ def list_all_requisitions(
 def list_project_requisitions(
     project_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_any)
 ):
     requisitions = session.exec(
         select(EquipmentRequest)
@@ -64,7 +63,6 @@ def list_project_requisitions(
 def get_requisition(
     req_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_any)
 ):
     req = session.get(EquipmentRequest, req_id)
     if not req:

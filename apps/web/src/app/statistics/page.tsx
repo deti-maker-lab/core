@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { projects as projectsApi, equipment as equipmentApi, users as usersApi, requisitions as requisitionsApi } from "@/lib/api";
 import type { Project, EquipmentCatalogItem, User, RequisitionDetail } from "@/lib/api";
 import { FolderOpen, Cpu, Users, TrendingUp, Clock, CheckCircle2, XCircle, BarChart2 } from "lucide-react";
+import Header from "@/app/components/header";
 
 function StatCard({ label, value, sub, icon, color }: { label: string; value: string | number; sub?: string; icon: React.ReactNode; color: string }) {
   return (
@@ -91,7 +92,8 @@ export default function StatisticsPage() {
   if (loading) return <div className="text-gray-400 animate-pulse p-8">Loading statistics...</div>;
 
   return (
-    <div className="flex flex-col gap-8">
+    <main className="flex-1 bg-[#f4f5f7] p-8 min-h-screen font-sans text-gray-900">
+      <Header/>
       <div>
         <h1 className="text-2xl font-bold text-gray-900 mb-1">Statistics</h1>
         <p className="text-gray-400 text-sm">Overview of lab activity and resources</p>
@@ -251,6 +253,6 @@ export default function StatisticsPage() {
           ))}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -30,7 +30,7 @@ def _parse_price(value):
     return None
 
 @router.get("/catalog", response_model=List[EquipmentCatalogItemRead])
-def get_catalog(session: Session = Depends(get_session), current_user: User = Depends(require_any)):
+def get_catalog(session: Session = Depends(get_session)):
     items = list_equipment_catalog_from_snipeit()
     return items
 
@@ -47,7 +47,7 @@ def trigger_catalog_sync(session: Session = Depends(get_session), current_user: 
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{equipment_id}", response_model=EquipmentCatalogItemRead)
-def get_equipment_detail(equipment_id: int, current_user: User = Depends(require_any)):
+def get_equipment_detail(equipment_id: int):
     from services.snipeit.assets import get_asset
 
     asset = get_asset(equipment_id)
@@ -94,7 +94,6 @@ def refresh_local_equipment(equipment_id: int, session: Session = Depends(get_se
 @router.get("/{equipment_id}/projects")
 def get_equipment_projects(
     equipment_id: int,
-    current_user: User = Depends(require_any),
     session: Session = Depends(get_session)
 ):
     from sqlmodel import select

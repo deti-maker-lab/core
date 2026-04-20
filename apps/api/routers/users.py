@@ -15,7 +15,6 @@ router = APIRouter(prefix="/users", tags=["users"])
 @router.get("", response_model=List[UserRead])
 def get_users(
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_any),
 ):
     return list_users(session)
 
@@ -29,7 +28,6 @@ def get_me(current_user: User = Depends(require_any)):
 def get_user_by_id(
     user_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_any),
 ):
     return get_user(session, user_id)
 
@@ -38,7 +36,6 @@ def get_user_by_id(
 def get_projects_by_user(
     user_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_any),
 ):
     return get_user_projects(session, user_id)
 
@@ -47,7 +44,6 @@ def get_projects_by_user(
 def get_requisitions_by_user(
     user_id: int,
     session: Session = Depends(get_session),
-    current_user: User = Depends(require_any),
 ):
     return get_user_requisitions(session, user_id)
 

@@ -86,7 +86,6 @@ function HomeContent() {
     <main className="flex-1 bg-[#f4f5f7] p-8 min-h-screen font-sans text-gray-900">
       <Header/>
 
-      {/* Hero Section */}
       <div className="flex flex-col items-center mb-16 mt-8">
         <h1 className="text-5xl md:text-[56px] font-extrabold tracking-tight mb-4 text-gray-900">
           DETI <span className="text-blue-600">Maker Lab</span>

@@ -74,7 +74,7 @@ export default function UserDetails({ params }: { params: Promise<{ userId: stri
   }
 
   return (
-    <main className="flex-1 bg-white p-8 min-h-screen text-gray-800">
+    <main className="flex-1 bg-[#f4f5f7] p-8 min-h-screen font-sans text-gray-900">
       <Header />
 
       <Link

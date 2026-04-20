@@ -1,3 +1,5 @@
+\c makerlab;
+
 -- infra/db/init/schema.sql
 
 -- =========================================================
@@ -133,7 +135,7 @@ CREATE TABLE equipment_request (
 CREATE TABLE equipment_request_items (
     id BIGSERIAL PRIMARY KEY,
     request_id BIGINT NOT NULL,
-    equipment_id BIGINT,  -- snipeit_asset_id do equipment local
+    equipment_id BIGINT,
     CONSTRAINT fk_equipment_request_items_request
         FOREIGN KEY (request_id) REFERENCES equipment_request(id) ON DELETE CASCADE,
     CONSTRAINT fk_equipment_request_items_equipment
