@@ -239,6 +239,8 @@ _docpress
 .DS_Store
 
 lib
+!apps/web/src/lib/
+!apps/web/src/lib/**
 dist
 tsconfig.tsbuildinfo
 test.lib/
