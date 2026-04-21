@@ -4,18 +4,18 @@
 import { useEffect, useState } from "react";
 import { projects as projectsApi, equipment as equipmentApi, users as usersApi, requisitions as requisitionsApi } from "@/lib/api";
 import type { Project, EquipmentCatalogItem, User, RequisitionDetail } from "@/lib/api";
-import { FolderOpen, Cpu, Users, TrendingUp, Clock, CheckCircle2, XCircle, BarChart2 } from "lucide-react";
+import { FolderOpen, Cpu, Users, TrendingUp, CheckCircle2, BarChart2 } from "lucide-react";
 import Header from "@/app/components/header";
 
 function StatCard({ label, value, sub, icon, color }: { label: string; value: string | number; sub?: string; icon: React.ReactNode; color: string }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+    <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
       <div className="flex items-start justify-between mb-4">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>{icon}</div>
+        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${color}`}>{icon}</div>
       </div>
-      <div className="text-3xl font-bold text-gray-900 mb-1">{value}</div>
-      <div className="text-sm font-medium text-gray-500">{label}</div>
-      {sub && <div className="text-xs text-gray-400 mt-1">{sub}</div>}
+      <div className="text-4xl font-extrabold text-gray-900 mb-1">{value}</div>
+      <div className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{label}</div>
+      {sub && <div className="text-xs text-gray-400 mt-2 font-medium">{sub}</div>}
     </div>
   );
 }
@@ -23,12 +23,12 @@ function StatCard({ label, value, sub, icon, color }: { label: string; value: st
 function Bar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
-    <div className="flex items-center gap-3">
-      <div className="w-28 text-xs text-gray-500 font-medium truncate shrink-0">{label}</div>
-      <div className="flex-1 bg-gray-100 rounded-full h-2">
-        <div className={`h-2 rounded-full transition-all ${color}`} style={{ width: `${pct}%` }} />
+    <div className="flex items-center gap-3 group">
+      <div className="w-28 text-sm text-gray-600 font-medium truncate shrink-0 transition-colors group-hover:text-gray-900">{label}</div>
+      <div className="flex-1 bg-gray-200 rounded-full h-2.5 overflow-hidden">
+        <div className={`h-full rounded-full transition-all duration-1000 ease-out ${color}`} style={{ width: `${pct}%` }} />
       </div>
-      <div className="w-8 text-xs text-gray-400 text-right shrink-0">{value}</div>
+      <div className="w-8 text-xs font-bold text-gray-500 text-right shrink-0">{value}</div>
     </div>
   );
 }
@@ -89,169 +89,150 @@ export default function StatisticsPage() {
   }));
   const maxMonth = Math.max(...projectsPerMonth.map((m) => m.count), 1);
 
-  if (loading) return <div className="text-gray-400 animate-pulse p-8">Loading statistics...</div>;
+  if (loading) return (
+    <div className="flex-1 bg-gray-50 flex items-center justify-center min-h-screen">
+        <div className="text-gray-400 font-medium animate-pulse flex flex-col items-center gap-3">
+            <BarChart2 size={32} className="animate-bounce text-blue-400" />
+            A carregar estatísticas...
+        </div>
+    </div>
+  );
 
   return (
-    <main className="flex-1 bg-[#f4f5f7] p-8 min-h-screen font-sans text-gray-900">
+    <main className="flex-1 bg-gray-50 p-8 min-h-screen font-sans text-gray-900 overflow-y-auto">
       <Header/>
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Statistics</h1>
-        <p className="text-gray-400 text-sm">Overview of lab activity and resources</p>
+      
+      {/* Título com mais impacto e margem inferior */}
+      <div className="mb-8 mt-4">
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-2">Dashboard</h1>
+        <p className="text-gray-500 font-medium">Visão geral da atividade e recursos do laboratório</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Projects"      value={projects.length}   sub={`${activeProjects} active`}     icon={<FolderOpen size={20} />} color="bg-blue-100 text-blue-500" />
-        <StatCard label="Equipment Items"     value={equipment.length}  sub={`${availableEquipment} available`} icon={<Cpu size={20} />}       color="bg-teal-100 text-teal-500" />
-        <StatCard label="Lab Members"         value={users.length}      sub={`${students} students`}          icon={<Users size={20} />}      color="bg-purple-100 text-purple-500" />
-        <StatCard label="Total Requisitions"  value={requisitions.length} sub={`${pendingReqs} pending`}      icon={<TrendingUp size={20} />}  color="bg-amber-100 text-amber-500" />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <FolderOpen size={16} className="text-gray-400" />
-            <h2 className="font-bold text-gray-800">Project Status</h2>
-          </div>
-          <div className="flex flex-col gap-3">
-            <Bar label="Active"    value={activeProjects}    max={projects.length} color="bg-green-400" />
-            <Bar label="Pending"   value={pendingProjects}   max={projects.length} color="bg-yellow-400" />
-            <Bar label="Completed" value={completedProjects} max={projects.length} color="bg-blue-400" />
-            <Bar label="Rejected"  value={rejectedProjects}  max={projects.length} color="bg-red-400" />
-          </div>
-          <div className="mt-6 pt-4 border-t border-gray-50 grid grid-cols-2 gap-3">
-            {[
-              { label: "Active",    value: activeProjects,    color: "text-green-500" },
-              { label: "Pending",   value: pendingProjects,   color: "text-yellow-500" },
-              { label: "Completed", value: completedProjects, color: "text-blue-500" },
-              { label: "Rejected",  value: rejectedProjects,  color: "text-red-500" },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="text-center">
-                <div className={`text-xl font-bold ${color}`}>{value}</div>
-                <div className="text-xs text-gray-400">{label}</div>
-              </div>
-            ))}
-          </div>
+      {/* Contentor principal com 'gap-8' para dar respiro entre as secções */}
+      <div className="flex flex-col gap-8">
+        
+        {/* Linha 1: Cartões Principais */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard label="Total Projects"  value={projects.length}     sub={`${activeProjects} active projects`}      icon={<FolderOpen size={24} />} color="bg-blue-100 text-blue-600" />
+          <StatCard label="Equipment Items" value={equipment.length}    sub={`${availableEquipment} items available`}  icon={<Cpu size={24} />}        color="bg-teal-100 text-teal-600" />
+          <StatCard label="Lab Members"     value={users.length}        sub={`${students} registered students`}        icon={<Users size={24} />}      color="bg-purple-100 text-purple-600" />
+          <StatCard label="Requisitions"    value={requisitions.length} sub={`${pendingReqs} pending requests`}        icon={<TrendingUp size={24} />} color="bg-amber-100 text-amber-600" />
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <Cpu size={16} className="text-gray-400" />
-            <h2 className="font-bold text-gray-800">Equipment Status</h2>
-          </div>
-          <div className="flex flex-col gap-3">
-            <Bar label="Available"   value={availableEquipment} max={equipment.length} color="bg-teal-400" />
-            <Bar label="Checked out" value={checkedOut}          max={equipment.length} color="bg-orange-400" />
-          </div>
-          <div className="mt-6 pt-4 border-t border-gray-50">
-            <div className="flex items-center justify-between text-sm mb-3">
-              <span className="text-gray-500">Utilisation rate</span>
-              <span className="font-bold text-gray-800">
-                {equipment.length > 0 ? Math.round((checkedOut / equipment.length) * 100) : 0}%
-              </span>
+        {/* Linha 2: Barras de Status */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gray-50 rounded-lg"><FolderOpen size={18} className="text-gray-500" /></div>
+              <h2 className="font-bold text-lg text-gray-800">Project Status</h2>
             </div>
-            <div className="w-full bg-gray-100 rounded-full h-3">
-              <div
-                className="h-3 rounded-full bg-gradient-to-r from-teal-400 to-teal-500"
-                style={{ width: `${equipment.length > 0 ? (availableEquipment / equipment.length) * 100 : 0}%` }}
-              />
-            </div>
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <div className="text-center p-3 bg-teal-50 rounded-xl">
-                <div className="text-xl font-bold text-teal-600">{availableEquipment}</div>
-                <div className="text-xs text-teal-500">Available</div>
-              </div>
-              <div className="text-center p-3 bg-orange-50 rounded-xl">
-                <div className="text-xl font-bold text-orange-500">{checkedOut}</div>
-                <div className="text-xs text-orange-400">In use</div>
-              </div>
+            <div className="flex flex-col gap-4">
+              <Bar label="Active"    value={activeProjects}    max={projects.length} color="bg-green-500" />
+              <Bar label="Pending"   value={pendingProjects}   max={projects.length} color="bg-yellow-500" />
+              <Bar label="Completed" value={completedProjects} max={projects.length} color="bg-blue-500" />
+              <Bar label="Rejected"  value={rejectedProjects}  max={projects.length} color="bg-red-500" />
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <Users size={16} className="text-gray-400" />
-            <h2 className="font-bold text-gray-800">User Roles</h2>
-          </div>
-          <div className="flex flex-col gap-3">
-            <Bar label="Students"    value={students}    max={users.length} color="bg-purple-400" />
-            <Bar label="Professors"  value={professors}  max={users.length} color="bg-blue-400" />
-            <Bar label="Technicians" value={technicians} max={users.length} color="bg-gray-400" />
-          </div>
-          <div className="mt-6 pt-4 border-t border-gray-50 flex flex-col gap-2">
-            {[
-              { label: "Students",    value: students,    bg: "bg-purple-50", text: "text-purple-600" },
-              { label: "Professors",  value: professors,  bg: "bg-blue-50",   text: "text-blue-600" },
-              { label: "Technicians", value: technicians, bg: "bg-gray-50",   text: "text-gray-600" },
-            ].map(({ label, value, bg, text }) => (
-              <div key={label} className={`flex items-center justify-between px-4 py-2 ${bg} rounded-xl`}>
-                <span className={`text-sm font-medium ${text}`}>{label}</span>
-                <span className={`text-sm font-bold ${text}`}>{value}</span>
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gray-50 rounded-lg"><Cpu size={18} className="text-gray-500" /></div>
+              <h2 className="font-bold text-lg text-gray-800">Equipment Status</h2>
+            </div>
+            <div className="flex flex-col gap-4">
+              <Bar label="Available"   value={availableEquipment} max={equipment.length} color="bg-teal-500" />
+              <Bar label="Checked out" value={checkedOut}         max={equipment.length} color="bg-orange-500" />
+            </div>
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <div className="flex items-center justify-between text-sm mb-3">
+                <span className="text-gray-500 font-medium">Utilisation rate</span>
+                <span className="font-bold text-gray-800">
+                  {equipment.length > 0 ? Math.round((checkedOut / equipment.length) * 100) : 0}%
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <BarChart2 size={16} className="text-gray-400" />
-            <h2 className="font-bold text-gray-800">Projects Created (last 6 months)</h2>
-          </div>
-          <div className="flex items-end gap-3 h-32">
-            {projectsPerMonth.map(({ label, count }) => (
-              <div key={label} className="flex-1 flex flex-col items-center gap-1">
-                <div className="text-xs font-bold text-gray-500">{count > 0 ? count : ""}</div>
+              <div className="w-full bg-gray-200 rounded-full h-3">
                 <div
-                  className="w-full bg-blue-100 rounded-t-lg transition-all"
-                  style={{ height: `${(count / maxMonth) * 100}px`, minHeight: count > 0 ? "4px" : "0" }}
-                >
-                  <div className="w-full h-full bg-blue-400 rounded-t-lg opacity-80" />
-                </div>
-                <div className="text-[10px] text-gray-400">{label}</div>
+                  className="h-3 rounded-full bg-gradient-to-r from-teal-400 to-teal-500 transition-all duration-1000"
+                  style={{ width: `${equipment.length > 0 ? (availableEquipment / equipment.length) * 100 : 0}%` }}
+                />
               </div>
-            ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gray-50 rounded-lg"><Users size={18} className="text-gray-500" /></div>
+              <h2 className="font-bold text-lg text-gray-800">User Roles</h2>
+            </div>
+            <div className="flex flex-col gap-4">
+              <Bar label="Students"    value={students}    max={users.length} color="bg-purple-500" />
+              <Bar label="Professors"  value={professors}  max={users.length} color="bg-blue-500" />
+              <Bar label="Technicians" value={technicians} max={users.length} color="bg-gray-400" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <TrendingUp size={16} className="text-gray-400" />
-            <h2 className="font-bold text-gray-800">Top Courses by Projects</h2>
-          </div>
-          {topCourses.length === 0 ? (
-            <p className="text-sm text-gray-400">No course data yet.</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {topCourses.map(([course, count]) => (
-                <Bar key={course} label={course} value={count} max={maxCourse} color="bg-indigo-400" />
+        {/* Linha 3: Gráficos Mistos */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="p-2 bg-gray-50 rounded-lg"><BarChart2 size={18} className="text-gray-500" /></div>
+              <h2 className="font-bold text-lg text-gray-800">Projects Created (Last 6 Months)</h2>
+            </div>
+            <div className="flex items-end gap-4 h-36 mt-4">
+              {projectsPerMonth.map(({ label, count }) => (
+                <div key={label} className="flex-1 flex flex-col items-center gap-2 group">
+                  <div className="text-sm font-bold text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">{count > 0 ? count : ""}</div>
+                  <div
+                    className="w-full max-w-[40px] bg-blue-100 rounded-t-lg transition-all duration-700 ease-out relative overflow-hidden"
+                    style={{ height: `${(count / maxMonth) * 100}px`, minHeight: count > 0 ? "8px" : "4px" }}
+                  >
+                    <div className="absolute bottom-0 w-full h-full bg-blue-500 opacity-90 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <div className="text-xs font-medium text-gray-500 uppercase">{label}</div>
+                </div>
               ))}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
-        <div className="flex items-center gap-2 mb-6">
-          <CheckCircle2 size={16} className="text-gray-400" />
-          <h2 className="font-bold text-gray-800">Equipment Requisitions Summary</h2>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: "Pending",   value: pendingReqs,                                              color: "bg-yellow-50 text-yellow-600" },
-            { label: "Reserved",  value: reservedReqs,                                             color: "bg-purple-50 text-purple-600" },
-            { label: "Fulfilled", value: fulfilledReqs,                                            color: "bg-teal-50 text-teal-600" },
-            { label: "Rejected",  value: requisitions.filter((r) => r.status === "rejected").length, color: "bg-red-50 text-red-500" },
-          ].map(({ label, value, color }) => (
-            <div key={label} className={`rounded-2xl p-5 text-center ${color}`}>
-              <div className="text-3xl font-bold mb-1">{value}</div>
-              <div className="text-xs font-semibold uppercase tracking-wide opacity-70">{label}</div>
+          <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-gray-50 rounded-lg"><TrendingUp size={18} className="text-gray-500" /></div>
+              <h2 className="font-bold text-lg text-gray-800">Top Courses by Projects</h2>
             </div>
-          ))}
+            {topCourses.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-gray-400 italic">No course data yet.</div>
+            ) : (
+              <div className="flex flex-col gap-5">
+                {topCourses.map(([course, count]) => (
+                  <Bar key={course} label={course} value={count} max={maxCourse} color="bg-indigo-500" />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Linha 4: Sumário de Requisições */}
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm mb-8">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-gray-50 rounded-lg"><CheckCircle2 size={18} className="text-gray-500" /></div>
+            <h2 className="font-bold text-lg text-gray-800">Equipment Requisitions Summary</h2>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              { label: "Pending",   value: pendingReqs,                                              color: "bg-yellow-50 text-yellow-600 border border-yellow-100" },
+              { label: "Reserved",  value: reservedReqs,                                             color: "bg-purple-50 text-purple-600 border border-purple-100" },
+              { label: "Fulfilled", value: fulfilledReqs,                                            color: "bg-teal-50 text-teal-600 border border-teal-100" },
+              { label: "Rejected",  value: requisitions.filter((r) => r.status === "rejected").length, color: "bg-red-50 text-red-600 border border-red-100" },
+            ].map(({ label, value, color }) => (
+              <div key={label} className={`rounded-2xl p-6 text-center shadow-sm hover:-translate-y-1 hover:shadow-md transition-all cursor-default ${color}`}>
+                <div className="text-4xl font-black mb-2">{value}</div>
+                <div className="text-xs font-bold uppercase tracking-wider opacity-80">{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
       </div>
     </main>
   );

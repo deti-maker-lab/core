@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Plus, X, Tag, Link as LinkIcon, Users, Cpu } from "lucide-react";
+import { ArrowLeft, Plus, X, Tag, Link as LinkIcon, Users, Cpu, FileText, ShieldCheck } from "lucide-react";
 import Header from "@/app/components/header";
 import {
   auth,
@@ -67,7 +67,6 @@ export default function NewProjectPage() {
         setSupervisors(allUsers.filter((u) => u.role === "professor"));
         setAvailableUsers(allUsers.filter((u) => u.role === "student" && u.id !== me.id));
         setCatalog(cat);
-        console.log("catalog sample:", cat.slice(0, 3));
       } catch (err: any) {
         if (cancelled) return;
         if (err?.message?.includes("401") || err?.message?.includes("Unauthorized")) {
@@ -104,11 +103,8 @@ export default function NewProjectPage() {
 
   const addSupervisor = () => {
     if (!selectedSupervisorId) return;
-
     const user = supervisors.find((u) => u.id === selectedSupervisorId);
-
     if (!user || members.find((m) => m.user.id === selectedSupervisorId)) return;
-
     setMembers([...members, { user, role: "supervisor" }]);
     setSelectedSupervisorId("");
   };
@@ -121,13 +117,8 @@ export default function NewProjectPage() {
     if (!selectedModelId) return;
     const model = catalog.find((m) => m.id === selectedModelId);
     if (!model || equipmentItems.find((e) => e.model.id === selectedModelId)) return;
-    setEquipmentItems([...equipmentItems, { model }]);  // sem quantity
+    setEquipmentItems([...equipmentItems, { model }]);
     setSelectedModelId("");
-  };
-
-  const updateQuantity = (modelId: number, qty: number) => {
-    if (qty < 1) return;
-    setEquipmentItems(equipmentItems.map((e) => (e.model.id === modelId ? { ...e, quantity: qty } : e)));
   };
 
   const handleSubmit = async () => {
@@ -170,70 +161,82 @@ export default function NewProjectPage() {
     }
   };
 
+  // Classes padrão reutilizáveis para inputs
+  const inputClass = "w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-gray-400 placeholder:font-normal";
+
   return (
-    <main className="flex-1 p-8 bg-white min-h-screen font-sans text-gray-800">
+    <main className="flex-1 p-8 bg-gray-50 min-h-screen font-sans text-gray-800 overflow-y-auto">
       <Header />
 
-      <Link
-        href="/projects"
-        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 mb-8 text-sm font-medium"
-      >
-        <ArrowLeft size={18} /> Back
-      </Link>
+      <div className="max-w-4xl mx-auto pb-12">
+        <Link
+          href="/projects"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 mb-8 text-sm font-semibold text-gray-600 shadow-sm transition-colors"
+        >
+          <ArrowLeft size={16} /> Back to Projects
+        </Link>
 
-      <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold mb-1">New Project</h1>
-        <p className="text-gray-400 font-medium mb-10">Fill in the details to submit your project for approval.</p>
+        <div className="mb-8">
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-2">Create New Project</h1>
+          <p className="text-gray-500 font-medium text-lg">Fill in the details to submit your project for approval.</p>
+        </div>
 
         <div className="flex flex-col gap-6">
-          <section className="border border-gray-200 rounded-[28px] p-8 bg-white shadow-sm">
-            <h2 className="text-lg font-bold mb-6">Project Information</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Project Information */}
+          <section className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+                <FileText size={20} />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">Project Information</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="md:col-span-2">
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">
-                  Project Name <span className="text-red-400">*</span>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">
+                  Project Name <span className="text-red-500">*</span>
                 </label>
                 <input
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors"
-                  placeholder="e.g. Solar Charger v2"
+                  className={inputClass}
+                  placeholder="e.g. Autonomous Solar Drone v2"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">Course</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Course</label>
                 <input
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors"
-                  placeholder="e.g. LEI"
+                  className={inputClass}
+                  placeholder="e.g. Engenharia Informática"
                   value={course}
                   onChange={(e) => setCourse(e.target.value)}
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">Academic Year</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Academic Year</label>
                 <input
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors"
-                  placeholder="e.g. 2024/2025"
+                  className={inputClass}
+                  placeholder="e.g. 2023/2024"
                   value={academicYear}
                   onChange={(e) => setAcademicYear(e.target.value)}
                 />
               </div>
               <div>
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">Group Number</label>
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Group Number</label>
                 <input
                   type="number"
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors"
+                  className={inputClass}
                   placeholder="e.g. 3"
                   value={groupNumber}
                   onChange={(e) => setGroupNumber(e.target.value)}
                 />
               </div>
-              <div className="md:col-span-2">
-                <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">Description</label>
+              <div className="md:col-span-2 mt-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 block">Description</label>
                 <textarea
                   rows={4}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors resize-none"
-                  placeholder="Describe the project goals and scope..."
+                  className={`${inputClass} resize-none`}
+                  placeholder="Describe the project goals, scope, and expected outcomes..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
@@ -241,30 +244,37 @@ export default function NewProjectPage() {
             </div>
           </section>
 
-          <section className="border border-gray-200 rounded-[28px] p-8 bg-white shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <Tag size={18} className="text-gray-400" />
-              <h2 className="text-lg font-bold">Tags</h2>
+          {/* Tags */}
+          <section className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                <Tag size={20} />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">Tags</h2>
             </div>
-            <div className="flex items-center gap-2 mb-4">
+            
+            <div className="flex flex-col sm:flex-row items-center gap-3 mb-4">
               <input
-                className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors"
-                placeholder="Add a tag..."
+                className={inputClass}
+                placeholder="Type a tag and press Enter..."
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
               />
-              <button onClick={addTag} className="p-3 bg-gray-900 text-white rounded-xl hover:bg-gray-700 transition-colors">
-                <Plus size={18} />
+              <button 
+                onClick={addTag} 
+                className="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-200 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={18} /> Add
               </button>
             </div>
             {tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 pt-2">
                 {tags.map((t) => (
-                  <span key={t} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                  <span key={t} className="group flex items-center gap-1.5 px-4 py-2 bg-gray-50 border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:border-red-200 hover:bg-red-50 transition-colors">
                     {t}
-                    <button onClick={() => setTags(tags.filter((x) => x !== t))}>
-                      <X size={12} className="hover:text-red-400 transition-colors" />
+                    <button onClick={() => setTags(tags.filter((x) => x !== t))} className="text-gray-400 group-hover:text-red-500 transition-colors">
+                      <X size={14} strokeWidth={3} />
                     </button>
                   </span>
                 ))}
@@ -272,30 +282,37 @@ export default function NewProjectPage() {
             )}
           </section>
 
-          <section className="border border-gray-200 rounded-[28px] p-8 bg-white shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <LinkIcon size={18} className="text-gray-400" />
-              <h2 className="text-lg font-bold">Documentation & Links</h2>
+          {/* Documentation & Links */}
+          <section className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                <LinkIcon size={20} />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">Documentation & Links</h2>
             </div>
-            <div className="flex items-center gap-2 mb-4">
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 mb-4">
               <input
-                className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors"
-                placeholder="https://..."
+                className={inputClass}
+                placeholder="https://github.com/..."
                 value={linkInput}
                 onChange={(e) => setLinkInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLink())}
               />
-              <button onClick={addLink} className="p-3 bg-gray-900 text-white rounded-xl hover:bg-gray-700 transition-colors">
-                <Plus size={18} />
+              <button 
+                onClick={addLink} 
+                className="w-full sm:w-auto px-6 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 hover:shadow-md hover:shadow-indigo-200 transition-all flex items-center justify-center gap-2"
+              >
+                <Plus size={18} /> Add
               </button>
             </div>
             {links.length > 0 && (
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-3 pt-2">
                 {links.map((l) => (
-                  <div key={l} className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-xl border border-gray-100">
-                    <a href={l} target="_blank" rel="noreferrer" className="text-sm text-blue-500 hover:underline truncate max-w-[90%]">{l}</a>
-                    <button onClick={() => setLinks(links.filter((x) => x !== l))}>
-                      <X size={14} className="text-gray-300 hover:text-red-400 transition-colors" />
+                  <div key={l} className="flex items-center justify-between px-5 py-4 bg-gray-50 rounded-xl border border-gray-100 group hover:border-gray-300 transition-colors">
+                    <a href={l} target="_blank" rel="noreferrer" className="text-sm font-medium text-indigo-600 hover:text-indigo-800 hover:underline truncate max-w-[90%]">{l}</a>
+                    <button onClick={() => setLinks(links.filter((x) => x !== l))} className="p-1.5 rounded-md text-gray-400 hover:bg-red-100 hover:text-red-600 transition-colors">
+                      <X size={16} strokeWidth={2.5} />
                     </button>
                   </div>
                 ))}
@@ -303,205 +320,210 @@ export default function NewProjectPage() {
             )}
           </section>
 
-          <section className="border border-gray-200 rounded-[28px] p-8 bg-white shadow-sm">
-            <h2 className="text-lg font-bold mb-6">
-              Supervisors <span className="text-red-400">*</span>
-            </h2>
-            {members
-              .filter((m) => m.role === "supervisor")
-              .map((m) => (
-                <div
-                  key={m.user.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mb-2"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-sm font-bold text-gray-400">
-                      {m.user.name.charAt(0).toUpperCase()}
+          {/* Supervisors */}
+          <section className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                <ShieldCheck size={20} />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">
+                Supervisors <span className="text-red-500">*</span>
+              </h2>
+            </div>
+            
+            {members.filter((m) => m.role === "supervisor").length > 0 && (
+              <div className="mb-6 flex flex-col gap-3">
+                {members.filter((m) => m.role === "supervisor").map((m) => (
+                  <div key={m.user.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-sm">
+                        {m.user.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="font-bold text-gray-900 text-sm">{m.user.name}</div>
+                        <div className="text-xs font-medium text-gray-500">{m.user.email}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="font-semibold text-sm">{m.user.name}</div>
-                      <div className="text-xs text-gray-400">{m.user.email}</div>
-                    </div>
+                    <button onClick={() => setMembers(members.filter((x) => x.user.id !== m.user.id))} className="p-2 text-gray-400 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors">
+                      <X size={18} />
+                    </button>
                   </div>
+                ))}
+              </div>
+            )}
 
-                  <button
-                    onClick={() =>
-                      setMembers(members.filter((x) => x.user.id !== m.user.id))
-                    }
-                  >
-                    <X size={16} className="text-gray-300 hover:text-red-400 transition-colors" />
-                  </button>
-                </div>
-              ))}
-            <div className="flex items-center gap-2 mt-4">
+            <div className="flex flex-col sm:flex-row items-center gap-3">
               <select
-                className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:border-gray-400 transition-colors"
+                className={`${inputClass} cursor-pointer`}
                 value={selectedSupervisorId}
-                onChange={(e) =>
-                  setSelectedSupervisorId(e.target.value ? parseInt(e.target.value) : "")
-                }
+                onChange={(e) => setSelectedSupervisorId(e.target.value ? parseInt(e.target.value) : "")}
               >
-                <option value="">Add a supervisor...</option>
+                <option value="">Select a supervisor from the list...</option>
                 {supervisors
                   .filter((s) => !members.find((m) => m.user.id === s.id))
                   .map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} — {s.email}
-                    </option>
+                    <option key={s.id} value={s.id}>{s.name} — {s.email}</option>
                   ))}
               </select>
-
-              <button
-                onClick={addSupervisor}
-                className="p-3 bg-gray-900 text-white rounded-xl hover:bg-gray-700 transition-colors"
-              >
-                <Plus size={18} />
+              <button onClick={addSupervisor} className="w-full sm:w-auto px-6 py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-all flex items-center justify-center gap-2">
+                <Plus size={18} /> Add
               </button>
             </div>
           </section>
 
-          <section className="border border-gray-200 rounded-[28px] p-8 bg-white shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <Users size={18} className="text-gray-400" />
-              <h2 className="text-lg font-bold">Team Members</h2>
+          {/* Team Members */}
+          <section className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-teal-50 text-teal-600 rounded-lg">
+                <Users size={20} />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">Team Members</h2>
             </div>
 
-            {currentUser && (
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-gray-200 rounded-full flex items-center justify-center text-sm font-bold text-gray-500">
-                    {currentUser.name.charAt(0).toUpperCase()}
+            <div className="flex flex-col gap-3 mb-6">
+              {currentUser && (
+                <div className="flex items-center justify-between p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-sm">
+                      {currentUser.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="font-bold text-gray-900 text-sm">{currentUser.name} <span className="text-gray-400 font-normal ml-1">(You)</span></div>
+                      <div className="text-xs font-medium text-gray-500">{currentUser.email}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-semibold text-sm">{currentUser.name}</div>
-                    <div className="text-xs text-gray-400">{currentUser.email}</div>
-                  </div>
+                  <span className="px-3 py-1.5 bg-indigo-100 text-indigo-700 text-[11px] font-bold uppercase tracking-wider rounded-lg border border-indigo-200">Leader</span>
                 </div>
-                <span className="px-3 py-1 bg-gray-900 text-white text-[10px] font-bold uppercase rounded-full">Leader</span>
-              </div>
-            )}
+              )}
 
-            {members
-              .filter((m) => m.role !== "supervisor")
-              .map((m) => (
-              <div key={m.user.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center text-sm font-bold text-gray-400">
-                    {m.user.name.charAt(0).toUpperCase()}
+              {members.filter((m) => m.role !== "supervisor").map((m) => (
+                <div key={m.user.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-gradient-to-br from-gray-300 to-gray-400 rounded-full flex items-center justify-center text-sm font-bold text-white shadow-sm">
+                      {m.user.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="font-bold text-gray-900 text-sm">{m.user.name}</div>
+                      <div className="text-xs font-medium text-gray-500">{m.user.email}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-semibold text-sm">{m.user.name}</div>
-                    <div className="text-xs text-gray-400">{m.user.email}</div>
+                  <div className="flex items-center gap-3">
+                    <select
+                      className="bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-600 uppercase outline-none cursor-pointer hover:border-gray-300 transition-colors"
+                      value={m.role}
+                      onChange={(e) => updateMemberRole(m.user.id, e.target.value)}
+                    >
+                      {MEMBER_ROLES
+                        .filter((r) => r !== "leader" && r !== "supervisor")
+                        .map((r) => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                    </select>
+                    <button onClick={() => setMembers(members.filter((x) => x.user.id !== m.user.id))} className="p-2 text-gray-400 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors">
+                      <X size={18} />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <select
-                    className="border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white outline-none"
-                    value={m.role}
-                    onChange={(e) => updateMemberRole(m.user.id, e.target.value)}
-                  >
-                    {MEMBER_ROLES
-                      .filter((r) => r !== "leader" && r !== "supervisor")
-                      .map((r) => (
-                        <option key={r} value={r}>
-                          {r.charAt(0).toUpperCase() + r.slice(1)}
-                        </option>
-                      ))}
-                  </select>
-                  <button onClick={() => setMembers(members.filter((x) => x.user.id !== m.user.id))}>
-                    <X size={16} className="text-gray-300 hover:text-red-400 transition-colors" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
 
-            <div className="flex items-center gap-2 mt-4">
+            <div className="flex flex-col sm:flex-row items-center gap-3">
               <select
-                className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:border-gray-400 transition-colors"
+                className={`${inputClass} cursor-pointer`}
                 value={selectedMemberId}
                 onChange={(e) => setSelectedMemberId(e.target.value ? parseInt(e.target.value) : "")}
               >
-                <option value="">Add a team member...</option>
+                <option value="">Add a student to your team...</option>
                 {availableUsers
                   .filter((u) => !members.find((m) => m.user.id === u.id))
                   .map((u) => (
                     <option key={u.id} value={u.id}>{u.name} — {u.email}</option>
                   ))}
               </select>
-              <button onClick={addMember} className="p-3 bg-gray-900 text-white rounded-xl hover:bg-gray-700 transition-colors">
-                <Plus size={18} />
+              <button onClick={addMember} className="w-full sm:w-auto px-6 py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-all flex items-center justify-center gap-2">
+                <Plus size={18} /> Add
               </button>
             </div>
           </section>
 
-          <section className="border border-gray-200 rounded-[28px] p-8 bg-white shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <Cpu size={18} className="text-gray-400" />
-              <h2 className="text-lg font-bold">Equipment Request</h2>
+          {/* Equipment Request */}
+          <section className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                <Cpu size={20} />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">Equipment Request</h2>
             </div>
 
-            {equipmentItems.map((e) => (
-              <div key={e.model.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mb-2">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-white border border-gray-100 rounded-lg text-gray-400">
-                    <Cpu size={16} />
+            {equipmentItems.length > 0 && (
+              <div className="flex flex-col gap-3 mb-6">
+                {equipmentItems.map((e) => (
+                  <div key={e.model.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-500 shadow-sm">
+                        <Cpu size={24} strokeWidth={1.5} />
+                      </div>
+                      <div>
+                        <div className="font-bold text-gray-900 text-sm flex items-center gap-2">
+                          {e.model.name}
+                          {e.model.asset_tag && (
+                            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-[10px] uppercase rounded-md tracking-widest">{e.model.asset_tag}</span>
+                          )}
+                        </div>
+                        <div className="text-xs font-medium text-gray-500 mt-0.5 flex items-center gap-1">
+                          Location: <span className="text-gray-700">{e.model.location || "N/A"}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button onClick={() => setEquipmentItems(equipmentItems.filter((x) => x.model.id !== e.model.id))} className="p-2 text-gray-400 hover:bg-red-100 hover:text-red-600 rounded-lg transition-colors">
+                      <X size={18} />
+                    </button>
                   </div>
-                  <div>
-                    <span className="text-sm font-semibold">{e.model.name}</span>
-                    {e.model.asset_tag && (
-                      <span className="text-xs text-gray-400 ml-2">[{e.model.asset_tag}]</span>
-                    )}
-                    {e.model.location && (
-                      <div className="text-xs text-gray-400">{e.model.location}</div>
-                    )}
-                  </div>
-                </div>
-                <button onClick={() => setEquipmentItems(equipmentItems.filter((x) => x.model.id !== e.model.id))}>
-                  <X size={16} className="text-gray-300 hover:text-red-400 transition-colors" />
-                </button>
+                ))}
               </div>
-            ))}
+            )}
 
-            <div className="flex items-center gap-2 mt-4">
+            <div className="flex flex-col sm:flex-row items-center gap-3">
               <select
-                className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:border-gray-400 transition-colors"
+                className={`${inputClass} cursor-pointer`}
                 value={selectedModelId}
                 onChange={(e) => setSelectedModelId(e.target.value ? parseInt(e.target.value) : "")}
               >
-                <option value="">Select equipment...</option>
+                <option value="">Select equipment from the lab catalog...</option>
                 {catalog
                   .filter((m) => m.available && !equipmentItems.find((e) => e.model.id === m.id))
                   .map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.name} {m.asset_tag ? `[${m.asset_tag}]` : ""} — {m.location ?? "no location"}
+                      {m.name} {m.asset_tag ? `[${m.asset_tag}]` : ""} — {m.location ?? "No location"}
                     </option>
                   ))}
               </select>
-              <button onClick={addEquipment} className="p-3 bg-gray-900 text-white rounded-xl hover:bg-gray-700 transition-colors">
-                <Plus size={18} />
+              <button onClick={addEquipment} className="w-full sm:w-auto px-6 py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-800 transition-all flex items-center justify-center gap-2">
+                <Plus size={18} /> Add
               </button>
             </div>
           </section>
 
           {error && (
-            <div className="px-5 py-4 bg-red-50 border border-red-100 text-red-500 text-sm rounded-xl">
+            <div className="px-6 py-4 bg-red-50 border border-red-200 text-red-600 font-medium text-sm rounded-2xl flex items-center justify-center shadow-sm">
               {error}
             </div>
           )}
 
-          <div className="flex gap-3 justify-end pb-8">
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-end mt-4">
             <Link
               href="/projects"
-              className="px-6 py-3 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+              className="px-8 py-4 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors text-center shadow-sm"
             >
               Cancel
             </Link>
             <button
               onClick={handleSubmit}
               disabled={submitting}
-              className="px-8 py-3 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-10 py-4 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 hover:shadow-lg hover:shadow-indigo-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
             >
-              {submitting ? "Submitting..." : "Submit Request"}
+              {submitting ? "Submitting Request..." : "Submit Project Request"}
             </button>
           </div>
         </div>

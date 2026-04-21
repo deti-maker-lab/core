@@ -81,11 +81,13 @@ export default function MyProjectsPage() {
 
       {/* Search & Filters */}
       <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
-        <div className="flex items-center border border-gray-200 rounded-full px-5 py-2.5 w-full max-w-xl shadow-sm">
-          <Search size={18} className="text-gray-400" />
+        
+        {/* NOVA BARRA DE PESQUISA (Igual à de Equipment) */}
+        <div className="relative w-full max-w-md">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
-            className="ml-3 outline-none w-full text-sm bg-transparent placeholder:text-gray-400"
-            placeholder="search by name..."
+            className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-sm font-medium"
+            placeholder="Search by name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
