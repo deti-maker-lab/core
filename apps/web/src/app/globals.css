@@ -12,7 +12,24 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --color-primary-50: #ebf5ea;
+  --color-primary-100: #d0ead0;
+  --color-primary-200: #a9d9aa;
+  --color-primary-500: #49a738;
+  --color-primary-600: #3A922A;
+  --color-primary-700: #2d7a1f;
+  --color-primary-800: #25601b;
+
+  --color-indigo-50: var(--color-primary-50);
+  --color-indigo-100: var(--color-primary-100);
+  --color-indigo-200: var(--color-primary-200);
+  --color-indigo-500: var(--color-primary-500);
+  --color-indigo-600: var(--color-primary-600);
+  --color-indigo-700: var(--color-primary-700);
+  --color-indigo-800: var(--color-primary-800);
 }
+
 
 @media (prefers-color-scheme: dark) {
   :root {

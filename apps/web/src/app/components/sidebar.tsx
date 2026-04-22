@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
-  Network, 
   LayoutDashboard, 
   Folder, 
   Cpu, 
@@ -15,7 +14,9 @@ import {
   Wrench, 
   ChevronLeft,
   ChevronRight,
-  LogOut
+  LogOut,
+  Package,
+  ExternalLink
 } from "lucide-react";
 import { auth } from "@/lib/api"; // A magia que fomos buscar ao Header!
 
@@ -59,11 +60,11 @@ export default function Sidebar() {
     >
       {/* Logo Section */}
       <div className={`flex items-center h-20 shrink-0 mb-2 ${isCollapsed ? "justify-center" : "px-6 gap-3"}`}>
-        <div className="bg-indigo-600 p-2 rounded-xl flex items-center justify-center shadow-md shadow-indigo-100">
-          <Network size={22} className="text-white" strokeWidth={2.5} />
+        <div className="flex items-center justify-center shrink-0">
+          <img src="/deti-maker-lab.png" alt="DETI MakerLab" className="w-10 h-10 object-contain" />
         </div>
         {!isCollapsed && (
-          <div className="flex items-center gap-1.5 text-black overflow-hidden">
+          <div className="flex items-center gap-1.5 text-indigo-600 overflow-hidden">
             <span className="font-bold text-lg leading-tight tracking-tight truncate">DETI</span>
             <span className="font-bold text-lg leading-tight tracking-tight whitespace-nowrap">Maker Lab</span>
           </div>
@@ -113,6 +114,24 @@ export default function Sidebar() {
           <Wrench size={20} className="shrink-0" />
           {!isCollapsed && <span className="whitespace-nowrap">Technician Portal</span>}
         </Link>
+        
+        <a
+          href="https://inventory.deti-makerlab.ua.pt"
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`flex items-center rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all shrink-0 ${
+            isCollapsed ? "justify-center py-3" : "gap-3 px-4 py-3"
+          }`}
+          title={isCollapsed ? "Inventory" : ""}
+        >
+          <Package size={20} className="shrink-0" />
+          {!isCollapsed && (
+            <div className="flex items-center justify-between flex-1 min-w-0">
+              <span className="whitespace-nowrap">Inventory</span>
+              <ExternalLink size={14} className="text-gray-400 shrink-0 ml-2" />
+            </div>
+          )}
+        </a>
       </nav>
 
       {/* Footer com Botões de Logout e Collapse */}

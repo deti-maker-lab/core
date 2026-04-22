@@ -63,7 +63,7 @@ export default function ProjectsPage() {
           </Link>
           <Link
             href="/projects/new"
-            className="flex items-center gap-2 px-4 py-2 bg-[#4F46E5] text-white rounded-xl text-sm font-bold hover:bg-[#4338ca] transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors shadow-sm"
           >
             <Plus size={18} /> New Project
           </Link>

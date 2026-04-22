@@ -88,7 +88,7 @@ function HomeContent() {
 
       <div className="flex flex-col items-center mb-16 mt-8">
         <h1 className="text-5xl md:text-[56px] font-extrabold tracking-tight mb-4 text-gray-900">
-          DETI <span className="text-blue-600">Maker Lab</span>
+          DETI <span className="text-indigo-600">Maker Lab</span>
         </h1>
         <p className="text-lg text-gray-500 mb-8 font-medium">Your lab management platform. Search anything.</p>
         <div className="relative w-full max-w-3xl mx-auto" ref={searchRef}>
@@ -98,7 +98,7 @@ function HomeContent() {
             placeholder="Search projects, equipment, users..."
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-full pl-14 pr-12 py-4 rounded-full border border-gray-200 bg-white text-gray-900 font-medium text-base outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-sm placeholder:text-gray-400 placeholder:font-normal"
+            className="w-full pl-14 pr-12 py-4 rounded-full border border-gray-200 bg-white text-gray-900 font-medium text-base outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm placeholder:text-gray-400 placeholder:font-normal"
           />
           {search && (
             <button 
@@ -212,7 +212,7 @@ function HomeContent() {
       <div>
         <div className="flex justify-between items-end mb-6 px-1">
           <h2 className="text-[22px] font-bold text-gray-900">Recent Projects</h2>
-          <Link href="/projects" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
+          <Link href="/projects" className="text-indigo-600 hover:text-indigo-700 font-medium text-sm">
             View all
           </Link>
         </div>
