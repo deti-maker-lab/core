@@ -5,14 +5,16 @@ import { Search, Mail } from "lucide-react";
 import Link from "next/link";
 import Header from "@/app/components/header";
 import { users as usersApi, type User } from "@/lib/api";
-
-const filterOptions = ["All", "Students", "Professors", "Technician"];
+import { useTranslation } from "react-i18next";
 
 export default function UsersPage() {
+  const { t } = useTranslation();
   const [userList, setUserList] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+
+  const filterOptions = [t("usersPage.all"), t("usersPage.students"), t("usersPage.professors"), t("usersPage.technician")];
 
   useEffect(() => {
     usersApi.list()
@@ -23,10 +25,10 @@ export default function UsersPage() {
 
   const filteredUsers = userList.filter((user) => {
     const matchesFilter = 
-      activeFilter === "All" || 
-      (activeFilter === "Students" && user.role === "student") ||
-      (activeFilter === "Professors" && user.role === "professor") ||
-      (activeFilter === "Technician" && user.role === "lab_technician");
+      activeFilter === t("usersPage.all") || 
+      (activeFilter === t("usersPage.students") && user.role === "student") ||
+      (activeFilter === t("usersPage.professors") && user.role === "professor") ||
+      (activeFilter === t("usersPage.technician") && user.role === "lab_technician");
 
     const matchesSearch = 
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -41,9 +43,9 @@ export default function UsersPage() {
       <Header />
 
       <div className="mb-6">
-        <h1 className="text-[32px] font-bold text-gray-900 mb-1">Users</h1>
+        <h1 className="text-[32px] font-bold text-gray-900 mb-1">{t("usersPage.title")}</h1>
         <p className="text-gray-500 font-medium">
-          {loading ? "Loading..." : `${userList.length} lab participants`}
+          {loading ? t("common.loading") : t("usersPage.participants", { count: userList.length })}
         </p>
       </div>
 
@@ -52,7 +54,7 @@ export default function UsersPage() {
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             className="w-full pl-11 pr-4 py-2.5 bg-[#eceef1] border-none rounded-xl outline-none text-sm text-gray-600 placeholder:text-gray-400"
-            placeholder="Search by name, email or nmec..."
+            placeholder={t("usersPage.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -103,7 +105,7 @@ export default function UsersPage() {
                     user.role === 'lab_technician' ? 'bg-emerald-50 text-emerald-600' :
                     'bg-indigo-50 text-indigo-600'
                   }`}>
-                    {user.role === 'lab_technician' ? 'Staff' : user.role}
+                    {user.role === 'lab_technician' ? t("usersPage.staff") : user.role === 'student' ? t("usersPage.students") : t("usersPage.professors")}
                   </span>
                 </div>
                 
@@ -136,7 +138,7 @@ export default function UsersPage() {
           <div className="bg-[#eceef1] p-4 rounded-full mb-4">
             <Search size={32} className="text-gray-400" />
           </div>
-          <p className="text-gray-400 font-medium">No results found.</p>
+          <p className="text-gray-400 font-medium">{t("usersPage.noResults")}</p>
         </div>
       )}
     </main>

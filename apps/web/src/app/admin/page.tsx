@@ -12,8 +12,10 @@ import {
   type EquipmentCatalogItem,
 } from "@/lib/api";
 import Header from "@/app/components/header";
+import { useTranslation } from "react-i18next";
 
 export default function TechnicianPortal() {
+  const { t } = useTranslation();
   const [pendingProjects, setPendingProjects] = useState<Project[]>([]);
   const [pendingReqs, setPendingReqs]         = useState<RequisitionDetail[]>([]);
   const [recentActions, setRecentActions]     = useState<Project[]>([]);
@@ -122,26 +124,26 @@ export default function TechnicianPortal() {
       <Header/>
 
       <div className="mb-10">
-        <h1 className="text-3xl font-bold mb-2">Technician Portal</h1>
-        <p className="text-gray-500 font-medium">Manage lab inventory and review project proposals</p>
+        <h1 className="text-3xl font-bold mb-2">{t("admin.title")}</h1>
+        <p className="text-gray-500 font-medium">{t("admin.subtitle")}</p>
       </div>
 
       {loading ? (
-        <div className="text-gray-400 animate-pulse">Loading...</div>
+        <div className="text-gray-400 animate-pulse">{t("common.loading")}</div>
       ) : (
         <div className="flex flex-col gap-10">
 
           <section>
             <div className="flex items-center gap-3 mb-4">
               <Folder size={24} className="text-gray-600" />
-              <h2 className="text-xl font-bold">Pending Project Proposals</h2>
+              <h2 className="text-xl font-bold">{t("admin.pendingProposals")}</h2>
               <span className="bg-gray-500 text-white text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full">
                 {pendingProjects.length}
               </span>
             </div>
 
             {pendingProjects.length === 0 ? (
-              <p className="text-gray-400 text-sm">No pending proposals.</p>
+              <p className="text-gray-400 text-sm">{t("admin.noPendingProposals")}</p>
             ) : (
               pendingProjects.map((proj) => (
                 <div key={proj.id} className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-4">
@@ -156,25 +158,25 @@ export default function TechnicianPortal() {
                         onClick={() => setConfirmModal({ type: "reject_project", id: proj.id, name: proj.name })}
                         className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
                       >
-                        <X size={16} /> Reject
+                        <X size={16} /> {t("admin.reject")}
                       </button>
                       <button
                         disabled={acting}
                         onClick={() => setConfirmModal({ type: "approve_project", id: proj.id, name: proj.name })}
                         className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-700 transition-colors disabled:opacity-50"
                       >
-                        <Check size={16} /> Approve
+                        <Check size={16} /> {t("admin.approve")}
                       </button>
                     </div>
                   </div>
 
                   <p className="text-gray-500 text-sm mb-4 leading-relaxed max-w-4xl">
-                    {proj.description || "No description."}
+                    {proj.description || t("admin.noDescription")}
                   </p>
 
                   <div className="flex items-center gap-6 text-sm text-gray-500 font-medium">
                     <div className="flex items-center gap-2">
-                      <Users size={16} /> {projectMembers[proj.id] ?? "?"} members
+                      <Users size={16} /> {projectMembers[proj.id] ?? "?"} {t("admin.members")}
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock size={16} />
@@ -199,14 +201,14 @@ export default function TechnicianPortal() {
           <section>
             <div className="flex items-center gap-3 mb-4">
               <Cpu size={24} className="text-gray-600" />
-              <h2 className="text-xl font-bold">Pending Equipment Requests</h2>
+              <h2 className="text-xl font-bold">{t("admin.pendingEquipmentRequests")}</h2>
               <span className="bg-gray-500 text-white text-sm font-bold w-6 h-6 flex items-center justify-center rounded-full">
                 {pendingReqs.length}
               </span>
             </div>
 
             {pendingReqs.length === 0 ? (
-              <p className="text-gray-400 text-sm">No pending equipment requests.</p>
+              <p className="text-gray-400 text-sm">{t("admin.noPendingEquipmentRequests")}</p>
             ) : (
               pendingReqs.map((req) => {
                 const blocked = reqProjectPending(req);
@@ -218,7 +220,7 @@ export default function TechnicianPortal() {
                     {blocked && (
                       <div className="flex items-center gap-2 text-yellow-600 text-xs font-semibold mb-3 bg-yellow-50 px-3 py-2 rounded-lg border border-yellow-100">
                         <AlertTriangle size={14} />
-                        Approve or reject the project "{projectName}" first.
+                        {t("admin.approveRejectProjectFirst", { projectName })}
                       </div>
                     )}
 
@@ -228,7 +230,7 @@ export default function TechnicianPortal() {
                           {projectName}
                         </div>
                         <div className="text-sm text-gray-400 mb-3">
-                          Requested by <span className="font-medium text-gray-600">{requesterName}</span>
+                          {t("admin.requestedBy")} <span className="font-medium text-gray-600">{requesterName}</span>
                           {" · "}{new Date(req.created_at).toLocaleDateString("pt-PT")}
                         </div>
 
@@ -253,14 +255,14 @@ export default function TechnicianPortal() {
                             onClick={() => setConfirmModal({ type: "reject_req", id: req.id, name: projectName })}
                             className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
                           >
-                            <X size={16} /> Reject
+                            <X size={16} /> {t("admin.reject")}
                           </button>
                           <button
                             disabled={acting}
                             onClick={() => setConfirmModal({ type: "approve_req", id: req.id, name: projectName })}
                             className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-bold hover:bg-gray-700 transition-colors disabled:opacity-50"
                           >
-                            <Check size={16} /> Approve
+                            <Check size={16} /> {t("admin.approve")}
                           </button>
                         </div>
                       )}
@@ -272,9 +274,9 @@ export default function TechnicianPortal() {
           </section>
 
           <section>
-            <h2 className="text-lg font-bold mb-4">Recently Actioned</h2>
+            <h2 className="text-lg font-bold mb-4">{t("admin.recentlyActioned")}</h2>
             {recentActions.length === 0 ? (
-              <p className="text-gray-400 text-sm">No recent actions.</p>
+              <p className="text-gray-400 text-sm">{t("admin.noRecentActions")}</p>
             ) : (
               recentActions.map((p) => (
                 <div key={p.id} className="bg-gray-50 border border-gray-200 rounded-2xl p-5 flex justify-between items-center mb-3">
@@ -290,7 +292,7 @@ export default function TechnicianPortal() {
                       ? "bg-green-50 border-green-100 text-green-600"
                       : "bg-red-50 border-red-100 text-red-500"
                   }`}>
-                    {p.status}
+                    {t(`statistics.status.${p.status}`, p.status)}
                   </span>
                 </div>
               ))
@@ -303,10 +305,10 @@ export default function TechnicianPortal() {
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white w-full max-w-md rounded-[24px] p-8 shadow-xl">
             <h2 className="text-xl font-bold mb-2">
-              {confirmModal.type.startsWith("approve") ? "Confirm Approval" : "Confirm Rejection"}
+              {confirmModal.type.startsWith("approve") ? t("admin.confirmApproval") : t("admin.confirmRejection")}
             </h2>
             <p className="text-gray-500 mb-6">
-              {confirmModal.type.startsWith("approve") ? "Are you sure you want to approve " : "Are you sure you want to reject "}
+              {confirmModal.type.startsWith("approve") ? t("admin.confirmApproveText") + " " : t("admin.confirmRejectText") + " "}
               <span className="font-semibold text-gray-700">{confirmModal.name}</span>?
             </p>
             <div className="flex justify-end gap-3">
@@ -314,7 +316,7 @@ export default function TechnicianPortal() {
                 onClick={() => setConfirmModal(null)}
                 className="px-6 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50"
               >
-                Cancel
+                {t("admin.cancel")}
               </button>
               <button
                 disabled={acting}
@@ -325,7 +327,7 @@ export default function TechnicianPortal() {
                     : "bg-red-500 hover:bg-red-600"
                 }`}
               >
-                {acting ? "Processing..." : confirmModal.type.startsWith("approve") ? "Approve" : "Reject"}
+                {acting ? t("admin.processing") : confirmModal.type.startsWith("approve") ? t("admin.approve") : t("admin.reject")}
               </button>
             </div>
           </div>

@@ -9,8 +9,10 @@ import { Suspense } from "react";
 import { projects as projectsApi, equipment as equipmentApi, auth, users as usersApi } from "@/lib/api";
 import type { Project, User, EquipmentCatalogItem } from "@/lib/api";
 import Header from "@/app/components/header";
+import { useTranslation } from "react-i18next";
 
 function HomeContent() {
+  const { t } = useTranslation();
   const [projectList, setProjectList]   = useState<Project[]>([]);
   const [catalogList, setCatalogList]   = useState<EquipmentCatalogItem[]>([]);
   const [loading, setLoading]           = useState(true);
@@ -88,14 +90,14 @@ function HomeContent() {
 
       <div className="flex flex-col items-center mb-16 mt-8">
         <h1 className="text-5xl md:text-[56px] font-extrabold tracking-tight mb-4 text-gray-900">
-          DETI <span className="text-indigo-600">Maker Lab</span>
+          {t("home.title")} <span className="text-indigo-600">{t("home.titleHighlight")}</span>
         </h1>
-        <p className="text-lg text-gray-500 mb-8 font-medium">Your lab management platform. Search anything.</p>
+        <p className="text-lg text-gray-500 mb-8 font-medium">{t("home.subtitle")}</p>
         <div className="relative w-full max-w-3xl mx-auto" ref={searchRef}>
           <Search size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
-            placeholder="Search projects, equipment, users..."
+            placeholder={t("home.searchPlaceholder")}
             value={search}
             onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-14 pr-12 py-4 rounded-full border border-gray-200 bg-white text-gray-900 font-medium text-base outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm placeholder:text-gray-400 placeholder:font-normal"
@@ -112,12 +114,12 @@ function HomeContent() {
           {searchResults && (search.trim()) && (
             <div className="absolute top-full left-0 right-0 mt-3 bg-white border border-gray-200 rounded-3xl shadow-xl z-50 overflow-hidden max-h-[500px] overflow-y-auto py-2">
               {searchResults.projects.length === 0 && searchResults.equipment.length === 0 && searchResults.users.length === 0 ? (
-                <div className="px-4 py-8 text-center text-sm text-gray-500">No results for "{search}"</div>
+                <div className="px-4 py-8 text-center text-sm text-gray-500">{t("home.noResults", { query: search })}</div>
               ) : (
                 <>
                   {searchResults.projects.length > 0 && (
                     <div>
-                      <div className="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400 text-center">Projects</div>
+                      <div className="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400 text-center">{t("home.projects")}</div>
                       {searchResults.projects.slice(0, 4).map((p) => (
                         <Link key={p.id} href={`/projects/${p.id}`} onClick={() => setSearchResults(null)}>
                           <div className="flex items-start gap-4 px-6 py-3 hover:bg-gray-50 transition-colors">
@@ -134,14 +136,14 @@ function HomeContent() {
 
                   {searchResults.equipment.length > 0 && (
                     <div>
-                      <div className="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400 text-center mt-2">Equipment</div>
+                      <div className="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400 text-center mt-2">{t("home.equipment")}</div>
                       {searchResults.equipment.slice(0, 4).map((e) => (
                         <Link key={e.id} href={`/equipment/${e.id}`} onClick={() => setSearchResults(null)}>
                           <div className="flex items-start gap-4 px-6 py-3 hover:bg-gray-50 transition-colors">
                             <Cpu size={18} className="text-gray-400 mt-0.5 shrink-0" />
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium text-gray-900 truncate">{e.name}</div>
-                              <div className="text-sm text-gray-500 capitalize">{e.available ? "Available" : "In use"}</div>
+                              <div className="text-sm text-gray-500 capitalize">{e.available ? t("home.available") : t("home.inUse")}</div>
                             </div>
                           </div>
                         </Link>
@@ -151,7 +153,7 @@ function HomeContent() {
 
                   {searchResults.users.length > 0 && (
                     <div>
-                      <div className="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400 text-center mt-2">Users</div>
+                      <div className="px-4 py-3 text-[11px] font-bold uppercase tracking-widest text-gray-400 text-center mt-2">{t("home.users")}</div>
                       {searchResults.users.slice(0, 4).map((u) => (
                         <Link key={u.id} href={`/users/${u.id}`} onClick={() => setSearchResults(null)}>
                           <div className="flex items-start gap-4 px-6 py-3 hover:bg-gray-50 transition-colors">
@@ -179,7 +181,7 @@ function HomeContent() {
             icon={<Folder size={20} className="text-blue-500" />}
             iconBg="bg-blue-50"
             value={loading ? "..." : String(activeProjects)}
-            label="Active Projects"
+            label={t("home.activeProjects")}
           />
         </Link>
         <Link href="/equipment" className="block">
@@ -187,7 +189,7 @@ function HomeContent() {
             icon={<Cpu size={20} className="text-teal-500" />}
             iconBg="bg-teal-50"
             value={loading ? "..." : String(catalogList.length)}
-            label="Available Equipment"
+            label={t("home.availableEquipment")}
           />
         </Link>
         <Link href="/users" className="block">
@@ -195,7 +197,7 @@ function HomeContent() {
             icon={<Users size={20} className="text-purple-500" />}
             iconBg="bg-purple-50"
             value={loading ? "..." : String(userCount)}
-            label="Lab Members"
+            label={t("home.labMembers")}
           />
         </Link>
         <Link href="/projects" className="block">
@@ -203,7 +205,7 @@ function HomeContent() {
             icon={<Activity size={20} className="text-yellow-500" />}
             iconBg="bg-yellow-50"
             value={loading ? "..." : String(projectList.filter((p) => p.status === "pending").length)}
-            label="Checked Out"
+            label={t("home.checkedOut")}
           />
         </Link>
       </div>
@@ -211,9 +213,9 @@ function HomeContent() {
       {/* Recent Projects */}
       <div>
         <div className="flex justify-between items-end mb-6 px-1">
-          <h2 className="text-[22px] font-bold text-gray-900">Recent Projects</h2>
+          <h2 className="text-[22px] font-bold text-gray-900">{t("home.recentProjects")}</h2>
           <Link href="/projects" className="text-indigo-600 hover:text-indigo-700 font-medium text-sm">
-            View all
+            {t("home.viewAll")}
           </Link>
         </div>
 
@@ -224,7 +226,7 @@ function HomeContent() {
             ))}
           </div>
         ) : recentProjects.length === 0 ? (
-          <p className="text-gray-400 text-center py-12">No projects yet.</p>
+          <p className="text-gray-400 text-center py-12">{t("home.noProjects")}</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {recentProjects.map((proj) => (
@@ -234,6 +236,7 @@ function HomeContent() {
                   desc={proj.description ?? ""}
                   status={proj.status}
                   course={proj.course ?? ""}
+                  noDescText={t("home.noDescription")}
                 />
               </Link>
             ))}
@@ -269,7 +272,7 @@ function StatCard({ icon, iconBg, value, label }: { icon: React.ReactNode; iconB
   );
 }
 
-function ProjectCard({ title, desc, status, course }: { title: string; desc: string; status: string; course: string }) {
+function ProjectCard({ title, desc, status, course, noDescText }: { title: string; desc: string; status: string; course: string; noDescText: string }) {
   return (
     <div className="bg-white rounded-[24px] border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full cursor-pointer hover:shadow-md hover:border-gray-200 transition-all duration-200">
       <div className="h-[140px] bg-gradient-to-br from-blue-50/80 to-slate-50 flex items-center justify-center">
@@ -278,7 +281,7 @@ function ProjectCard({ title, desc, status, course }: { title: string; desc: str
       <div className="p-5 flex-1 flex flex-col justify-between">
         <div>
           <h3 className="font-bold text-gray-900 text-base mb-1 truncate">{title}</h3>
-          <p className="text-sm text-gray-500 mb-4 line-clamp-1">{desc || "No description provided"}</p>
+          <p className="text-sm text-gray-500 mb-4 line-clamp-1">{desc || noDescText}</p>
         </div>
         <div className="flex items-center text-xs text-gray-400 font-medium gap-2">
           {course && <span>{course}</span>}

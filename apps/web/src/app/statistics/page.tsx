@@ -6,6 +6,7 @@ import { projects as projectsApi, equipment as equipmentApi, users as usersApi, 
 import type { Project, EquipmentCatalogItem, User, RequisitionDetail } from "@/lib/api";
 import { FolderOpen, Cpu, Users, TrendingUp, CheckCircle2, BarChart2 } from "lucide-react";
 import Header from "@/app/components/header";
+import { useTranslation } from "react-i18next";
 
 function StatCard({ label, value, sub, icon, color }: { label: string; value: string | number; sub?: string; icon: React.ReactNode; color: string }) {
   return (
@@ -34,6 +35,7 @@ function Bar({ label, value, max, color }: { label: string; value: number; max: 
 }
 
 export default function StatisticsPage() {
+  const { t } = useTranslation();
   const [projects, setProjects]       = useState<Project[]>([]);
   const [equipment, setEquipment]     = useState<EquipmentCatalogItem[]>([]);
   const [users, setUsers]             = useState<User[]>([]);
@@ -93,7 +95,7 @@ export default function StatisticsPage() {
     <div className="flex-1 bg-gray-50 flex items-center justify-center min-h-screen">
         <div className="text-gray-400 font-medium animate-pulse flex flex-col items-center gap-3">
             <BarChart2 size={32} className="animate-bounce text-blue-400" />
-            A carregar estatísticas...
+            {t("statistics.loading")}
         </div>
     </div>
   );
@@ -104,8 +106,8 @@ export default function StatisticsPage() {
       
       {/* Título com mais impacto e margem inferior */}
       <div className="mb-8 mt-4">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-2">Dashboard</h1>
-        <p className="text-gray-500 font-medium">Visão geral da atividade e recursos do laboratório</p>
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-2">{t("statistics.title")}</h1>
+        <p className="text-gray-500 font-medium">{t("statistics.subtitle")}</p>
       </div>
 
       {/* Contentor principal com 'gap-8' para dar respiro entre as secções */}
@@ -113,10 +115,10 @@ export default function StatisticsPage() {
         
         {/* Linha 1: Cartões Principais */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard label="Total Projects"  value={projects.length}     sub={`${activeProjects} active projects`}      icon={<FolderOpen size={24} />} color="bg-blue-100 text-blue-600" />
-          <StatCard label="Equipment Items" value={equipment.length}    sub={`${availableEquipment} items available`}  icon={<Cpu size={24} />}        color="bg-teal-100 text-teal-600" />
-          <StatCard label="Lab Members"     value={users.length}        sub={`${students} registered students`}        icon={<Users size={24} />}      color="bg-purple-100 text-purple-600" />
-          <StatCard label="Requisitions"    value={requisitions.length} sub={`${pendingReqs} pending requests`}        icon={<TrendingUp size={24} />} color="bg-amber-100 text-amber-600" />
+          <StatCard label={t("statistics.totalProjects")}  value={projects.length}     sub={`${activeProjects} ${t("statistics.activeProjects")}`}      icon={<FolderOpen size={24} />} color="bg-blue-100 text-blue-600" />
+          <StatCard label={t("statistics.equipmentItems")} value={equipment.length}    sub={`${availableEquipment} ${t("statistics.itemsAvailable")}`}  icon={<Cpu size={24} />}        color="bg-teal-100 text-teal-600" />
+          <StatCard label={t("statistics.labMembers")}     value={users.length}        sub={`${students} ${t("statistics.registeredStudents")}`}        icon={<Users size={24} />}      color="bg-purple-100 text-purple-600" />
+          <StatCard label={t("statistics.requisitions")}    value={requisitions.length} sub={`${pendingReqs} ${t("statistics.pendingRequests")}`}        icon={<TrendingUp size={24} />} color="bg-amber-100 text-amber-600" />
         </div>
 
         {/* Linha 2: Barras de Status */}
@@ -124,28 +126,28 @@ export default function StatisticsPage() {
           <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-gray-50 rounded-lg"><FolderOpen size={18} className="text-gray-500" /></div>
-              <h2 className="font-bold text-lg text-gray-800">Project Status</h2>
+              <h2 className="font-bold text-lg text-gray-800">{t("statistics.projectStatus")}</h2>
             </div>
             <div className="flex flex-col gap-4">
-              <Bar label="Active"    value={activeProjects}    max={projects.length} color="bg-green-500" />
-              <Bar label="Pending"   value={pendingProjects}   max={projects.length} color="bg-yellow-500" />
-              <Bar label="Completed" value={completedProjects} max={projects.length} color="bg-blue-500" />
-              <Bar label="Rejected"  value={rejectedProjects}  max={projects.length} color="bg-red-500" />
+              <Bar label={t("statistics.status.active")}    value={activeProjects}    max={projects.length} color="bg-green-500" />
+              <Bar label={t("statistics.status.pending")}   value={pendingProjects}   max={projects.length} color="bg-yellow-500" />
+              <Bar label={t("statistics.status.completed")} value={completedProjects} max={projects.length} color="bg-blue-500" />
+              <Bar label={t("statistics.status.rejected")}  value={rejectedProjects}  max={projects.length} color="bg-red-500" />
             </div>
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-gray-50 rounded-lg"><Cpu size={18} className="text-gray-500" /></div>
-              <h2 className="font-bold text-lg text-gray-800">Equipment Status</h2>
+              <h2 className="font-bold text-lg text-gray-800">{t("statistics.equipmentStatus")}</h2>
             </div>
             <div className="flex flex-col gap-4">
-              <Bar label="Available"   value={availableEquipment} max={equipment.length} color="bg-teal-500" />
-              <Bar label="Checked out" value={checkedOut}         max={equipment.length} color="bg-orange-500" />
+              <Bar label={t("statistics.status.available")}   value={availableEquipment} max={equipment.length} color="bg-teal-500" />
+              <Bar label={t("statistics.status.checkedOut")} value={checkedOut}         max={equipment.length} color="bg-orange-500" />
             </div>
             <div className="mt-8 pt-6 border-t border-gray-100">
               <div className="flex items-center justify-between text-sm mb-3">
-                <span className="text-gray-500 font-medium">Utilisation rate</span>
+                <span className="text-gray-500 font-medium">{t("statistics.utilisationRate")}</span>
                 <span className="font-bold text-gray-800">
                   {equipment.length > 0 ? Math.round((checkedOut / equipment.length) * 100) : 0}%
                 </span>
@@ -162,12 +164,12 @@ export default function StatisticsPage() {
           <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-gray-50 rounded-lg"><Users size={18} className="text-gray-500" /></div>
-              <h2 className="font-bold text-lg text-gray-800">User Roles</h2>
+              <h2 className="font-bold text-lg text-gray-800">{t("statistics.userRoles")}</h2>
             </div>
             <div className="flex flex-col gap-4">
-              <Bar label="Students"    value={students}    max={users.length} color="bg-purple-500" />
-              <Bar label="Professors"  value={professors}  max={users.length} color="bg-blue-500" />
-              <Bar label="Technicians" value={technicians} max={users.length} color="bg-gray-400" />
+              <Bar label={t("statistics.roles.students")}    value={students}    max={users.length} color="bg-purple-500" />
+              <Bar label={t("statistics.roles.professors")}  value={professors}  max={users.length} color="bg-blue-500" />
+              <Bar label={t("statistics.roles.technicians")} value={technicians} max={users.length} color="bg-gray-400" />
             </div>
           </div>
         </div>
@@ -177,7 +179,7 @@ export default function StatisticsPage() {
           <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3 mb-8">
               <div className="p-2 bg-gray-50 rounded-lg"><BarChart2 size={18} className="text-gray-500" /></div>
-              <h2 className="font-bold text-lg text-gray-800">Projects Created (Last 6 Months)</h2>
+              <h2 className="font-bold text-lg text-gray-800">{t("statistics.projectsCreated")}</h2>
             </div>
             <div className="flex items-end gap-4 h-36 mt-4">
               {projectsPerMonth.map(({ label, count }) => (
@@ -198,10 +200,10 @@ export default function StatisticsPage() {
           <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-2 bg-gray-50 rounded-lg"><TrendingUp size={18} className="text-gray-500" /></div>
-              <h2 className="font-bold text-lg text-gray-800">Top Courses by Projects</h2>
+              <h2 className="font-bold text-lg text-gray-800">{t("statistics.topCourses")}</h2>
             </div>
             {topCourses.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-gray-400 italic">No course data yet.</div>
+              <div className="h-full flex items-center justify-center text-gray-400 italic">{t("statistics.noCourseData")}</div>
             ) : (
               <div className="flex flex-col gap-5">
                 {topCourses.map(([course, count]) => (
@@ -216,16 +218,16 @@ export default function StatisticsPage() {
         <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm mb-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-gray-50 rounded-lg"><CheckCircle2 size={18} className="text-gray-500" /></div>
-            <h2 className="font-bold text-lg text-gray-800">Equipment Requisitions Summary</h2>
+            <h2 className="font-bold text-lg text-gray-800">{t("statistics.reqSummary")}</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {[
-              { label: "Pending",   value: pendingReqs,                                              color: "bg-yellow-50 text-yellow-600 border border-yellow-100" },
-              { label: "Reserved",  value: reservedReqs,                                             color: "bg-purple-50 text-purple-600 border border-purple-100" },
-              { label: "Fulfilled", value: fulfilledReqs,                                            color: "bg-teal-50 text-teal-600 border border-teal-100" },
-              { label: "Rejected",  value: requisitions.filter((r) => r.status === "rejected").length, color: "bg-red-50 text-red-600 border border-red-100" },
-            ].map(({ label, value, color }) => (
-              <div key={label} className={`rounded-2xl p-6 text-center shadow-sm hover:-translate-y-1 hover:shadow-md transition-all cursor-default ${color}`}>
+              { label: t("statistics.status.pending"),   value: pendingReqs,                                              color: "bg-yellow-50 text-yellow-600 border border-yellow-100" },
+              { label: t("statistics.status.reserved"),  value: reservedReqs,                                             color: "bg-purple-50 text-purple-600 border border-purple-100" },
+              { label: t("statistics.status.fulfilled"), value: fulfilledReqs,                                            color: "bg-teal-50 text-teal-600 border border-teal-100" },
+              { label: t("statistics.status.rejected"),  value: requisitions.filter((r) => r.status === "rejected").length, color: "bg-red-50 text-red-600 border border-red-100" },
+            ].map(({ label, value, color }, idx) => (
+              <div key={idx} className={`rounded-2xl p-6 text-center shadow-sm hover:-translate-y-1 hover:shadow-md transition-all cursor-default ${color}`}>
                 <div className="text-4xl font-black mb-2">{value}</div>
                 <div className="text-xs font-bold uppercase tracking-wider opacity-80">{label}</div>
               </div>

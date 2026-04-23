@@ -16,11 +16,14 @@ import {
   ChevronRight,
   LogOut,
   Package,
-  ExternalLink
+  ExternalLink,
+  Globe
 } from "lucide-react";
 import { auth } from "@/lib/api"; // A magia que fomos buscar ao Header!
+import { useTranslation } from "react-i18next";
 
 export default function Sidebar() {
+  const { t, i18n } = useTranslation();
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false); // Estado para sabermos se há login
@@ -37,12 +40,12 @@ export default function Sidebar() {
   }
 
   const menuItems = [
-    { name: "Dashboard", href: "/", icon: <LayoutDashboard size={22} /> },
-    { name: "Projects", href: "/projects", icon: <Folder size={22} /> },
-    { name: "Equipment", href: "/equipment", icon: <Cpu size={22} /> },
-    { name: "Users", href: "/users", icon: <Users size={22} /> },
-    { name: "Statistics", href: "/statistics", icon: <BarChart3 size={22} /> },
-    { name: "Ledger", href: "/ledger", icon: <BookText size={22} /> },
+    { name: t("sidebar.dashboard"), href: "/", icon: <LayoutDashboard size={22} /> },
+    { name: t("sidebar.projects"), href: "/projects", icon: <Folder size={22} /> },
+    { name: t("sidebar.equipment"), href: "/equipment", icon: <Cpu size={22} /> },
+    { name: t("sidebar.users"), href: "/users", icon: <Users size={22} /> },
+    { name: t("sidebar.statistics"), href: "/statistics", icon: <BarChart3 size={22} /> },
+    { name: t("sidebar.ledger"), href: "/ledger", icon: <BookText size={22} /> },
   ];
 
   // A verdadeira função de Logout (roubada do Header)
@@ -99,7 +102,7 @@ export default function Sidebar() {
         {/* Separator / Management Section */}
         {!isCollapsed && (
           <div className="mt-8 mb-2 px-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0">
-            Management
+            {t("sidebar.management")}
           </div>
         )}
         {isCollapsed && <div className="h-px bg-gray-100 my-4 mx-2 shrink-0" />}
@@ -109,10 +112,10 @@ export default function Sidebar() {
           className={`flex items-center rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all shrink-0 ${
             isCollapsed ? "justify-center py-3" : "gap-3 px-4 py-3"
           }`}
-          title={isCollapsed ? "Technician Portal" : ""}
+          title={isCollapsed ? t("sidebar.technicianPortal") : ""}
         >
           <Wrench size={20} className="shrink-0" />
-          {!isCollapsed && <span className="whitespace-nowrap">Technician Portal</span>}
+          {!isCollapsed && <span className="whitespace-nowrap">{t("sidebar.technicianPortal")}</span>}
         </Link>
         
         <a
@@ -122,12 +125,12 @@ export default function Sidebar() {
           className={`flex items-center rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all shrink-0 ${
             isCollapsed ? "justify-center py-3" : "gap-3 px-4 py-3"
           }`}
-          title={isCollapsed ? "Inventory" : ""}
+          title={isCollapsed ? t("sidebar.inventory") : ""}
         >
           <Package size={20} className="shrink-0" />
           {!isCollapsed && (
             <div className="flex items-center justify-between flex-1 min-w-0">
-              <span className="whitespace-nowrap">Inventory</span>
+              <span className="whitespace-nowrap">{t("sidebar.inventory")}</span>
               <ExternalLink size={14} className="text-gray-400 shrink-0 ml-2" />
             </div>
           )}
@@ -137,6 +140,28 @@ export default function Sidebar() {
       {/* Footer com Botões de Logout e Collapse */}
       <div className="p-4 border-t border-gray-100 flex flex-col gap-2 shrink-0 bg-white">
         
+        {/* Language Switcher */}
+        <div className={`flex items-center rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-gray-100 transition-colors shadow-sm ${isCollapsed ? "justify-center py-2" : "px-3 py-2"}`}>
+          {isCollapsed ? (
+            <div className="text-gray-500 font-bold text-xs uppercase cursor-pointer" onClick={() => i18n.changeLanguage(i18n.language === 'en' ? 'pt' : 'en')} title={t("common.language")}>
+              {i18n.language.substring(0,2)}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 w-full">
+              <Globe size={16} className="text-gray-400 shrink-0" />
+              <select 
+                className="bg-transparent text-sm font-medium text-gray-600 outline-none w-full cursor-pointer appearance-none"
+                value={i18n.language.substring(0,2)}
+                onChange={(e) => i18n.changeLanguage(e.target.value)}
+              >
+                <option value="en">{t("common.en")}</option>
+                <option value="pt">{t("common.pt")}</option>
+                <option value="pl">{t("common.pl")}</option>
+              </select>
+            </div>
+          )}
+        </div>
+
         {/* O botão agora SÓ aparece se a pessoa estiver logada! */}
         {isLoggedIn && (
           <button 
@@ -144,10 +169,10 @@ export default function Sidebar() {
             className={`flex items-center rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 hover:text-red-700 transition-all group ${
               isCollapsed ? "justify-center py-3" : "gap-3 px-4 py-3"
             }`}
-            title={isCollapsed ? "Logout" : ""}
+            title={isCollapsed ? t("sidebar.logout") : ""}
           >
             <LogOut size={20} className="shrink-0 group-hover:-translate-x-1 transition-transform" />
-            {!isCollapsed && <span className="whitespace-nowrap">Logout</span>}
+            {!isCollapsed && <span className="whitespace-nowrap">{t("sidebar.logout")}</span>}
           </button>
         )}
 
@@ -155,7 +180,7 @@ export default function Sidebar() {
         <button 
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="border border-gray-100 rounded-xl p-2.5 w-full flex justify-center bg-gray-50/50 hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-700 shadow-sm"
-          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          title={isCollapsed ? t("sidebar.expandSidebar") : t("sidebar.collapseSidebar")}
         >
           {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>

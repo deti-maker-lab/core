@@ -4,8 +4,10 @@ import { useEffect, useState, useRef } from "react";
 import { Bell, UserCircle, Check } from "lucide-react";
 import { auth, notifications as notificationsApi } from "@/lib/api";
 import type { User, Notification } from "@/lib/api";
+import { useTranslation } from "react-i18next";
 
 export default function Header() {
+  const { t } = useTranslation();
   const [user, setUser]           = useState<User | null>(null);
   const [loaded, setLoaded]       = useState(false);
   const [notifs, setNotifs]       = useState<Notification[]>([]);
@@ -103,13 +105,13 @@ export default function Header() {
             {open && (
               <div className="absolute right-0 top-10 w-80 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden">
                 <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                  <span className="text-sm font-bold text-gray-800">Notifications</span>
+                  <span className="text-sm font-bold text-gray-800">{t("header.notifications")}</span>
                   {unreadCount > 0 && (
                     <button
                       onClick={markAllRead}
                       className="flex items-center gap-1 text-xs font-semibold text-purple-600 hover:text-purple-800 transition-colors"
                     >
-                      <Check size={12} /> Mark all read
+                      <Check size={12} /> {t("header.markAllRead")}
                     </button>
                   )}
                 </div>
@@ -117,7 +119,7 @@ export default function Header() {
                 <div className="max-h-96 overflow-y-auto">
                   {notifs.length === 0 ? (
                     <div className="px-4 py-8 text-center text-sm text-gray-400">
-                      No notifications yet.
+                      {t("header.noNotifications")}
                     </div>
                   ) : (
                     notifs.map((n: any) => (
@@ -157,7 +159,7 @@ export default function Header() {
             onClick={handleLogout}
             className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 transition-colors"
           >
-            Logout
+            {t("header.logout")}
           </button>
         </>
       ) : (
@@ -165,7 +167,7 @@ export default function Header() {
           localStorage.setItem("returnUrl", window.location.pathname + window.location.search);
           window.location.href = auth.loginUrl();
         }}>
-          Login
+          {t("header.login")}
         </button>
       )}
     </div>
