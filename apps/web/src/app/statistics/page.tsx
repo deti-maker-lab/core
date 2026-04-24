@@ -101,19 +101,16 @@ export default function StatisticsPage() {
   );
 
   return (
-    <main className="flex-1 bg-gray-50 p-8 min-h-screen font-sans text-gray-900 overflow-y-auto">
+    <main className="flex-1 p-8 bg-[#f4f5f7] min-h-screen font-sans text-gray-900">
       <Header/>
       
-      {/* Título com mais impacto e margem inferior */}
       <div className="mb-8 mt-4">
         <h1 className="text-3xl font-extrabold text-gray-900 mb-2">{t("statistics.title")}</h1>
         <p className="text-gray-500 font-medium">{t("statistics.subtitle")}</p>
       </div>
 
-      {/* Contentor principal com 'gap-8' para dar respiro entre as secções */}
       <div className="flex flex-col gap-8">
         
-        {/* Linha 1: Cartões Principais */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <StatCard label={t("statistics.totalProjects")}  value={projects.length}     sub={`${activeProjects} ${t("statistics.activeProjects")}`}      icon={<FolderOpen size={24} />} color="bg-blue-100 text-blue-600" />
           <StatCard label={t("statistics.equipmentItems")} value={equipment.length}    sub={`${availableEquipment} ${t("statistics.itemsAvailable")}`}  icon={<Cpu size={24} />}        color="bg-teal-100 text-teal-600" />
@@ -121,7 +118,6 @@ export default function StatisticsPage() {
           <StatCard label={t("statistics.requisitions")}    value={requisitions.length} sub={`${pendingReqs} ${t("statistics.pendingRequests")}`}        icon={<TrendingUp size={24} />} color="bg-amber-100 text-amber-600" />
         </div>
 
-        {/* Linha 2: Barras de Status */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3 mb-6">
@@ -174,7 +170,6 @@ export default function StatisticsPage() {
           </div>
         </div>
 
-        {/* Linha 3: Gráficos Mistos */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center gap-3 mb-8">
@@ -214,7 +209,6 @@ export default function StatisticsPage() {
           </div>
         </div>
 
-        {/* Linha 4: Sumário de Requisições */}
         <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm mb-8">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-gray-50 rounded-lg"><CheckCircle2 size={18} className="text-gray-500" /></div>

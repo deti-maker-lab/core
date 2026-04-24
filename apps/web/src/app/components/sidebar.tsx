@@ -19,16 +19,15 @@ import {
   ExternalLink,
   Globe
 } from "lucide-react";
-import { auth } from "@/lib/api"; // A magia que fomos buscar ao Header!
+import { auth } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
 export default function Sidebar() {
   const { t, i18n } = useTranslation();
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Estado para sabermos se há login
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Vai perguntar à API se existe uma sessão válida
   useEffect(() => {
     auth.me()
       .then(() => setIsLoggedIn(true))
@@ -45,10 +44,9 @@ export default function Sidebar() {
     { name: t("sidebar.equipment"), href: "/equipment", icon: <Cpu size={22} /> },
     { name: t("sidebar.users"), href: "/users", icon: <Users size={22} /> },
     { name: t("sidebar.statistics"), href: "/statistics", icon: <BarChart3 size={22} /> },
-    { name: t("sidebar.ledger"), href: "/ledger", icon: <BookText size={22} /> },
+    //{ name: t("sidebar.ledger"), href: "/ledger", icon: <BookText size={22} /> },
   ];
 
-  // A verdadeira função de Logout (roubada do Header)
   function handleLogout() {
     localStorage.removeItem("token");
     document.cookie = "token=; path=/; max-age=0";
@@ -61,7 +59,6 @@ export default function Sidebar() {
         isCollapsed ? "w-20" : "w-64"
       }`}
     >
-      {/* Logo Section */}
       <div className={`flex items-center h-20 shrink-0 mb-2 ${isCollapsed ? "justify-center" : "px-6 gap-3"}`}>
         <div className="flex items-center justify-center shrink-0">
           <img src="/deti-maker-lab.png" alt="DETI MakerLab" className="w-10 h-10 object-contain" />
@@ -76,7 +73,6 @@ export default function Sidebar() {
 
       <div className="w-full h-px bg-gray-100 mb-4 shrink-0" />
 
-      {/* Main Navigation */}
       <nav className="flex-1 overflow-y-auto flex flex-col gap-1 px-3 custom-scrollbar">
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
@@ -99,7 +95,6 @@ export default function Sidebar() {
           );
         })}
 
-        {/* Separator / Management Section */}
         {!isCollapsed && (
           <div className="mt-8 mb-2 px-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0">
             {t("sidebar.management")}
@@ -137,10 +132,8 @@ export default function Sidebar() {
         </a>
       </nav>
 
-      {/* Footer com Botões de Logout e Collapse */}
       <div className="p-4 border-t border-gray-100 flex flex-col gap-2 shrink-0 bg-white">
         
-        {/* Language Switcher */}
         <div className={`flex items-center rounded-xl border border-gray-100 bg-gray-50/50 hover:bg-gray-100 transition-colors shadow-sm ${isCollapsed ? "justify-center py-2" : "px-3 py-2"}`}>
           {isCollapsed ? (
             <div className="text-gray-500 font-bold text-xs uppercase cursor-pointer" onClick={() => i18n.changeLanguage(i18n.language === 'en' ? 'pt' : 'en')} title={t("common.language")}>
@@ -162,7 +155,6 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* O botão agora SÓ aparece se a pessoa estiver logada! */}
         {isLoggedIn && (
           <button 
             onClick={handleLogout}
@@ -176,7 +168,6 @@ export default function Sidebar() {
           </button>
         )}
 
-        {/* Collapse Button */}
         <button 
           onClick={() => setIsCollapsed(!isCollapsed)}
           className="border border-gray-100 rounded-xl p-2.5 w-full flex justify-center bg-gray-50/50 hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-700 shadow-sm"

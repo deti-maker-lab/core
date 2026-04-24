@@ -1,5 +1,6 @@
 # apps/api/services/requisition_service.py
 
+import os
 from datetime import datetime, timezone
 from typing import List, Dict, Tuple
 from sqlmodel import Session, select
@@ -132,6 +133,8 @@ def _build_req_description(session: Session, req: EquipmentRequest) -> tuple:
 
 
 def approve_requisition(session: Session, req_id: int, user_id: int) -> EquipmentRequest:
+    RESERVED_STATUS_ID = int(os.getenv("SNIPEIT_RESERVED_STATUS_ID", "4"))
+
     req = session.get(EquipmentRequest, req_id)
     if not req:
         raise ValueError("Requisition not found")
@@ -139,8 +142,8 @@ def approve_requisition(session: Session, req_id: int, user_id: int) -> Equipmen
         raise ValueError("Only pending requisitions can be approved")
 
     project = session.get(Project, req.project_id)
-    if not project or project.status not in ("active"):
-        raise ValueError("Cannot approve requisition: project is not approved yet")
+    if not project or project.status != "active":
+        raise ValueError("Project must be active to approve requisitions")
 
     items = session.exec(
         select(EquipmentRequestItem).where(EquipmentRequestItem.request_id == req_id)
@@ -150,22 +153,25 @@ def approve_requisition(session: Session, req_id: int, user_id: int) -> Equipmen
         equip = session.get(Equipment, item.equipment_id)
         if not equip:
             continue
-
         equip.status = "reserved"
 
         if equip.snipeit_asset_id:
             try:
                 from services.snipeit.client import snipeit_client
-                pass
+                snipeit_client.patch(
+                    f"/api/v1/hardware/{equip.snipeit_asset_id}",
+                    json_data={"status_id": RESERVED_STATUS_ID}
+                )
+                logger.info(f"SnipeIT asset {equip.snipeit_asset_id} → Reserved")
             except Exception as e:
-                logger.warning(f"Could not update SnipeIT status for asset {equip.snipeit_asset_id}: {e}")
+                logger.warning(f"SnipeIT update failed for asset {equip.snipeit_asset_id}: {e}")
 
     old_status = req.status
     req.status = "reserved"
     req.approved_at = datetime.now(timezone.utc)
 
     try:
-        _add_history(session, "equipment_request", req.id, old_status, "approved", user_id, "Requisition approved")
+        _add_history(session, "equipment_request", req.id, old_status, "reserved", user_id, "Requisition approved")
     except Exception as e:
         logger.warning(f"Status history error: {e}")
 

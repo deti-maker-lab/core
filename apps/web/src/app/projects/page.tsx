@@ -159,8 +159,7 @@ export default function ProjectsPage() {
                 </div>
 
                 <div className="flex items-center gap-6 xl:gap-8 shrink-0">
-                  <span className="hidden lg:block text-sm text-gray-400 font-medium">
-                    {/* Placeholder para supervisor caso não venha na API */}
+                  {/*<span className="hidden lg:block text-sm text-gray-400 font-medium">
                     {t("projectsPage.by")} { (proj as any).supervisor || "Dr. Sarah Chen" }
                   </span>
 
@@ -174,7 +173,7 @@ export default function ProjectsPage() {
                     <span className="hidden md:flex items-center gap-1.5 text-sm font-medium min-w-[90px]">
                       <Calendar size={16} /> {(proj as any).date || "Apr 2026"}
                     </span>
-                  </div>
+                  </div>*/}
 
                   <div className="flex items-center gap-4 min-w-[120px] justify-end">
                     <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold lowercase tracking-wider ${styles.bg} ${styles.text}`}>

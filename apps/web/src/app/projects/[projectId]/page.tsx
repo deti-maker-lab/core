@@ -406,6 +406,7 @@ export default function ProjectDetailPage() {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReqModal, setShowReqModal]   = useState(false);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   const loadRequisitions = async () => {
     const reqs = await requisitionsApi.listByProject(projectId).catch(() => [] as RequisitionDetail[]);
@@ -476,6 +477,14 @@ export default function ProjectDetailPage() {
 
         {isMember && (
           <div className="flex gap-2">
+            {project.status === "active" && (
+              <button
+                onClick={() => setShowCompleteModal(true)}
+                className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-600 rounded-xl text-sm font-semibold hover:bg-green-50 transition-colors"
+              >
+                <CheckCircle2 size={16} /> Mark as Completed
+              </button>
+            )}
             <button
               onClick={() => setShowReqModal(true)}
               className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors"
@@ -633,7 +642,6 @@ export default function ProjectDetailPage() {
         </div>
       </div>
 
-      {/* Modals */}
       {showEditModal && project && (
         <EditProjectModal
           project={project}
@@ -648,6 +656,39 @@ export default function ProjectDetailPage() {
           onClose={() => setShowReqModal(false)}
           onSubmitted={loadRequisitions}
         />
+      )}
+
+      {showCompleteModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-md rounded-[24px] p-8 shadow-xl">
+            <h2 className="text-xl font-bold mb-2">Mark as Completed?</h2>
+            <p className="text-gray-500 mb-6">
+              Are you sure you want to mark <span className="font-semibold text-gray-700">{project.name}</span> as completed? This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowCompleteModal(false)}
+                className="px-6 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await projectsApi.updateStatus(project.id, "completed");
+                    setProject({ ...project, status: "completed" });
+                    setShowCompleteModal(false);
+                  } catch (err: any) {
+                    alert(err.message);
+                  }
+                }}
+                className="px-6 py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 transition-colors"
+              >
+                Complete Project
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

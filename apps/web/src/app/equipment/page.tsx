@@ -1,37 +1,35 @@
-// apps/web/src/app/equipment/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { Search, ChevronDown, ChevronRight, Package } from "lucide-react";
 import Link from "next/link";
 import Header from "@/app/components/header";
-import { equipment as equipmentApi } from "@/lib/api";
+import { equipment as equipmentApi, type EquipmentCatalogItem } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
-type EquipmentItem = {
-  id: number;
-  name: string;
-  category?: string;
-  price?: string | number;
-  supplier?: string;
-  status?: string;
-  location?: string;
-  image?: string;
-};
-
-const statusFilters = ["All", "Available", "Checked Out", "Maintenance"];
+const statusFilters = ["All", "Available", "Reserved", "Checked Out", "Maintenance"];
 const categories = [
-  "All Categories", "Electronics", "3d Printing", "Laser Cutting", 
+  "All Categories", "Electronics", "3d Printing", "Laser Cutting",
   "Hand Tools", "Testing", "Computing", "Robotics", "Optics", "Safety", "Other"
 ];
 
-function normalizeStatus(status?: string): "available" | "checked out" | "maintenance" | "unknown" {
-  const s = (status || "").toLowerCase();
-  if (["ready to deploy", "available", "in stock"].includes(s)) return "available";
-  if (["checked out", "deployed", "assigned"].includes(s)) return "checked out";
-  if (["maintenance", "repair"].includes(s)) return "maintenance";
+function normalizeStatus(status?: string | null): string {
+  if (!status) return "unknown";
+  const s = status.toLowerCase();
+  if (s === "available") return "available";
+  if (s === "reserved") return "reserved";
+  if (s === "checked_out" || s === "checked out") return "checked out";
+  if (s === "maintenance" || s === "repair" || s === "retired") return "maintenance";
   return "unknown";
 }
+
+const statusBadge: Record<string, { bg: string; dot: string; label: string }> = {
+  available:     { bg: "bg-green-50 text-green-600",   dot: "bg-green-500",  label: "Available" },
+  reserved:      { bg: "bg-purple-50 text-purple-600", dot: "bg-purple-500", label: "Reserved" },
+  "checked out": { bg: "bg-orange-50 text-orange-600", dot: "bg-orange-500", label: "Checked Out" },
+  maintenance:   { bg: "bg-yellow-50 text-yellow-600", dot: "bg-yellow-500", label: "Maintenance" },
+  unknown:       { bg: "bg-gray-100 text-gray-500",    dot: "bg-gray-400",   label: "Unknown" },
+};
 
 export default function EquipmentPage() {
   const { t } = useTranslation();
@@ -39,7 +37,7 @@ export default function EquipmentPage() {
   const [activeCategory, setActiveCategory] = useState("All Categories");
   const [isCatOpen, setIsCatOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
+  const [equipment, setEquipment] = useState<EquipmentCatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,15 +45,29 @@ export default function EquipmentPage() {
       try {
         const data = await equipmentApi.catalog();
         const list = Array.isArray(data) ? data : (data as any)?.rows || [];
-        setEquipment(list.map((item: any) => ({
-          id: Number(item.id),
-          name: item.name ?? "Unnamed equipment",
-          category: item.category ?? "Uncategorized",
-          price: item.price ?? item.purchase_cost ?? "-",
-          status: item.status ?? "unknown",
-          location: item.location ?? "Unknown Room",
-          image: item.image ?? undefined,
-        })));
+        setEquipment(
+          list
+            .filter((item: any) => item != null && item.id != null)
+            .map((item: any): EquipmentCatalogItem => ({
+              id: Number(item.id),
+              model_id: item.model_id,
+              model_name: item.model_name,
+              name: item.name ?? "Unnamed equipment",
+              asset_tag: item.asset_tag,
+              serial: item.serial,
+              category: item.category ?? "Uncategorized",
+              supplier: item.supplier,
+              price: item.price ?? undefined,
+              status: item.status ?? "unknown",
+              snipeit_status: item.snipeit_status,
+              status_type: item.status_type,
+              location: item.location ?? "Unknown Room",
+              image: item.image ?? undefined,
+              assigned_to: item.assigned_to,
+              available: item.available ?? false,
+              expected_checkin: item.expected_checkin,
+            }))
+        );
       } catch (e) {
         console.error("Error loading equipment", e);
       } finally {
@@ -67,10 +79,12 @@ export default function EquipmentPage() {
   const filteredEquipment = useMemo(() => {
     return equipment.filter((item) => {
       const uiStatus = normalizeStatus(item.status);
-      const matchesStatus = activeStatus === "All" || uiStatus === activeStatus.toLowerCase();
-      const matchesCat = activeCategory === "All Categories" || item.category === activeCategory;
-      const matchesSearch = !search || item.name.toLowerCase().includes(search.toLowerCase());
-
+      const matchesStatus =
+        activeStatus === "All" || uiStatus === activeStatus.toLowerCase();
+      const matchesCat =
+        activeCategory === "All Categories" || item.category === activeCategory;
+      const matchesSearch =
+        !search || item.name.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesCat && matchesSearch;
     });
   }, [equipment, activeStatus, activeCategory, search]);
@@ -80,14 +94,17 @@ export default function EquipmentPage() {
       <Header />
 
       <div className="mb-8">
-        <h1 className="text-[32px] font-bold text-gray-900 mb-1">{t("equipmentPage.title")}</h1>
-        <p className="text-gray-500 font-medium">{t("equipmentPage.itemsInInventory", { count: equipment.length })}</p>
+        <h1 className="text-[32px] font-bold text-gray-900 mb-1">
+          {t("equipmentPage.title")}
+        </h1>
+        <p className="text-gray-500 font-medium">
+          {t("equipmentPage.itemsInInventory", { count: equipment.length })}
+        </p>
       </div>
 
       {/* Filters Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4 flex-1">
-          {/* Search Input */}
           <div className="relative w-full max-w-md">
             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -98,14 +115,18 @@ export default function EquipmentPage() {
             />
           </div>
 
-          {/* Categories Dropdown */}
           <div className="relative">
-            <button 
+            <button
               onClick={() => setIsCatOpen(!isCatOpen)}
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              {activeCategory === "All Categories" ? t("equipmentPage.allCategories") : activeCategory}
-              <ChevronDown size={16} className={`transition-transform ${isCatOpen ? 'rotate-180' : ''}`} />
+              {activeCategory === "All Categories"
+                ? t("equipmentPage.allCategories")
+                : activeCategory}
+              <ChevronDown
+                size={16}
+                className={`transition-transform ${isCatOpen ? "rotate-180" : ""}`}
+              />
             </button>
 
             {isCatOpen && (
@@ -114,7 +135,9 @@ export default function EquipmentPage() {
                   <button
                     key={cat}
                     onClick={() => { setActiveCategory(cat); setIsCatOpen(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${activeCategory === cat ? 'text-blue-600 font-bold' : 'text-gray-600'}`}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                      activeCategory === cat ? "text-blue-600 font-bold" : "text-gray-600"
+                    }`}
                   >
                     {cat === "All Categories" ? t("equipmentPage.allCategories") : cat}
                   </button>
@@ -124,17 +147,22 @@ export default function EquipmentPage() {
           </div>
         </div>
 
-        {/* Status Pills */}
         <div className="flex items-center bg-white p-1 border border-gray-200 rounded-xl">
           {statusFilters.map((opt) => (
             <button
               key={opt}
               onClick={() => setActiveStatus(opt)}
               className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
-                activeStatus === opt ? "bg-gray-100 text-gray-900 shadow-sm" : "text-gray-400 hover:text-gray-600"
+                activeStatus === opt
+                  ? "bg-gray-100 text-gray-900 shadow-sm"
+                  : "text-gray-400 hover:text-gray-600"
               }`}
             >
-              {opt === "All" ? t("equipmentPage.all") : opt === "Available" ? t("equipmentPage.available") : opt === "Checked Out" ? t("equipmentPage.checkedOut") : t("equipmentPage.maintenance")}
+              {opt === "All"          ? t("equipmentPage.all") :
+               opt === "Available"   ? t("equipmentPage.available") :
+               opt === "Reserved"    ? t("equipmentPage.reserved") :
+               opt === "Checked Out" ? t("equipmentPage.checkedOut") :
+                                       t("equipmentPage.maintenance")}
             </button>
           ))}
         </div>
@@ -143,14 +171,25 @@ export default function EquipmentPage() {
       {/* Equipment List */}
       <div className="space-y-3">
         <div className="px-4 mb-2">
-           <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t("equipmentPage.results", { count: filteredEquipment.length })}</span>
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+            {t("equipmentPage.results", { count: filteredEquipment.length })}
+          </span>
         </div>
 
         {loading ? (
-          <div className="text-center py-20 text-gray-400 font-medium">{t("equipmentPage.loading")}</div>
+          <div className="text-center py-20 text-gray-400 font-medium">
+            {t("equipmentPage.loading")}
+          </div>
+        ) : filteredEquipment.length === 0 ? (
+          <div className="text-center py-20 text-gray-400 font-medium">
+            No equipment found.
+          </div>
         ) : (
           filteredEquipment.map((item) => {
             const uiStatus = normalizeStatus(item.status);
+            {console.log(filteredEquipment)}
+            const badge = statusBadge[uiStatus] ?? statusBadge["unknown"];
+
             return (
               <Link
                 key={item.id}
@@ -160,7 +199,7 @@ export default function EquipmentPage() {
                 <div className="flex items-center gap-5">
                   <div className="w-14 h-14 bg-gray-50 flex items-center justify-center rounded-2xl border border-gray-100 overflow-hidden">
                     {item.image ? (
-                      <img src={item.image} alt="" className="w-full h-full object-cover" />
+                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                     ) : (
                       <Package size={24} className="text-gray-300" />
                     )}
@@ -168,34 +207,33 @@ export default function EquipmentPage() {
                   <div>
                     <h3 className="font-bold text-gray-900 text-base flex items-center gap-3">
                       {item.name}
-                      <span className="px-2.5 py-0.5 bg-gray-100 text-gray-500 text-[11px] font-bold rounded-full uppercase tracking-tight">
-                        {item.category}
-                      </span>
+                      {item.category && (
+                        <span className="px-2.5 py-0.5 bg-gray-100 text-gray-500 text-[11px] font-bold rounded-full uppercase tracking-tight">
+                          {item.category}
+                        </span>
+                      )}
                     </h3>
                     <p className="text-sm text-gray-400 mt-0.5 font-medium flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-gray-200" /> {item.location}
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-200" />
+                      {item.location ?? "Unknown location"}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-8">
-                  <div className="text-right">
+                  {item.price != null && (
                     <div className="text-sm font-bold text-gray-900">€{item.price}</div>
-                  </div>
+                  )}
 
                   <div className="flex items-center gap-4 min-w-[140px] justify-end">
-                    <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${
-                      uiStatus === "available" ? "bg-green-50 text-green-600" :
-                      uiStatus === "checked out" ? "bg-orange-50 text-orange-600" :
-                      "bg-red-50 text-red-600"
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${
-                        uiStatus === "available" ? "bg-green-500" :
-                        uiStatus === "checked out" ? "bg-orange-500" : "bg-red-500"
-                      }`} />
-                      {uiStatus === "available" ? t("equipmentPage.available") : uiStatus === "checked out" ? t("equipmentPage.checkedOut") : t("equipmentPage.maintenance")}
+                    <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${badge.bg}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
+                      {badge.label}
                     </span>
-                    <ChevronRight size={18} className="text-gray-300 group-hover:text-gray-400 transition-colors" />
+                    <ChevronRight
+                      size={18}
+                      className="text-gray-300 group-hover:text-gray-400 transition-colors"
+                    />
                   </div>
                 </div>
               </Link>

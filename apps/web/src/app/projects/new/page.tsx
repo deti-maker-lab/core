@@ -161,11 +161,10 @@ export default function NewProjectPage() {
     }
   };
 
-  // Classes padrão reutilizáveis para inputs
   const inputClass = "w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:bg-white focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-gray-400 placeholder:font-normal";
 
   return (
-    <main className="flex-1 p-8 bg-gray-50 min-h-screen font-sans text-gray-800 overflow-y-auto">
+    <main className="flex-1 bg-[#f4f5f7] p-8 min-h-screen font-sans text-gray-900">
       <Header />
 
       <div className="max-w-4xl mx-auto pb-12">

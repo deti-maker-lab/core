@@ -1,6 +1,6 @@
 # apps/api/services/snipeit/mappers.py
 
-from typing import List, Optional, Any, Dict
+from typing import Union, List, Optional, Any, Dict
 from pydantic import BaseModel
 
 class SnipeITResponseBase(BaseModel):
@@ -33,12 +33,16 @@ class SnipeITAsset(BaseModel):
     model: Optional[SnipeITRef] = None
     status_label: Optional[SnipeITRef] = None
     category: Optional[SnipeITRef] = None
-    assigned_to: Optional[Any] = None # Detailed user info or dict
+    assigned_to: Optional[Any] = None
     location: Optional[SnipeITRef] = None
     purchase_cost: Optional[str] = None
     image: Optional[str] = None
     supplier: Optional[SnipeITRef] = None
     rtd_location: Optional[SnipeITRef] = None
+    rtd_location: Optional[SnipeITRef] = None
+    last_checkout: Union[str, dict, None]
+    last_checkin: Union[str, dict, None]
+    expected_checkin: Union[str, dict, None]
 
 class SnipeITPaginatedResponse(BaseModel):
     total: int

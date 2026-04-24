@@ -108,6 +108,11 @@ export const notifications = {
 };
 
 
+export const ledger = {
+  list: (limit = 50, offset = 0) =>
+    request<LedgerEntry[]>(`/ledger?limit=${limit}&offset=${offset}`),
+};
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface User {
@@ -171,13 +176,14 @@ export interface EquipmentCatalogItem {
   supplier?: string;
   price?: number;
   status: string;
+  snipeit_status?: string;
   status_type?: string;
   location?: string;
   image?: string;
   assigned_to?: string;
   available?: boolean;
+  expected_checkin?: string;
 }
-
 export interface EquipmentModel {
   id: number;
   model_id?: number;
@@ -234,4 +240,15 @@ export interface Notification {
   reference_id?: number;
   is_read: boolean;
   created_at: string;
+}
+
+export interface LedgerEntry {
+  id: number;
+  entity_type: string;
+  entity_id: number;
+  old_status?: string;
+  new_status: string;
+  changed_by: string;
+  changed_at: string;
+  note?: string;
 }

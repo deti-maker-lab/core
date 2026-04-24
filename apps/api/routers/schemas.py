@@ -53,11 +53,13 @@ class EquipmentCatalogItemRead(BaseModel):
     supplier: Optional[str] = None
     price: Optional[float] = None
     status: str
+    snipeit_status: Optional[str] = None
     status_type: Optional[str] = None
     location: Optional[str] = None
     image: Optional[str] = None
     assigned_to: Optional[str] = None
-    available: Optional[bool] = None 
+    available: Optional[bool] = None
+    expected_checkin: Optional[str] = None
 
     class Config:
         from_attributes = True

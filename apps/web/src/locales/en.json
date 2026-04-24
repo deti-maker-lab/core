@@ -124,6 +124,7 @@
     "allCategories": "All Categories",
     "all": "All",
     "available": "Available",
+    "reserved": "Reserved",
     "checkedOut": "Checked Out",
     "maintenance": "Maintenance",
     "results": "{{count}} results",

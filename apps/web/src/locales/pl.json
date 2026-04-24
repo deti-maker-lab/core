@@ -124,6 +124,7 @@
     "allCategories": "Wszystkie kategorie",
     "all": "Wszystkie",
     "available": "Dostępne",
+    "reserved": "Zarezerwowane",
     "checkedOut": "Wypożyczone",
     "maintenance": "W naprawie",
     "results": "{{count}} wyników",

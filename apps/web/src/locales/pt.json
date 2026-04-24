@@ -124,6 +124,7 @@
     "allCategories": "Todas as Categorias",
     "all": "Todos",
     "available": "Disponível",
+    "reserved": "Reservado",
     "checkedOut": "Emprestado",
     "maintenance": "Manutenção",
     "results": "{{count}} resultados",

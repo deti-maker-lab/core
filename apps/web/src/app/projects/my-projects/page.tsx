@@ -60,12 +60,10 @@ export default function MyProjectsPage() {
   });
 
   return (
-    <main className="flex-1 bg-white p-8 min-h-screen font-sans text-gray-800">
+    <main className="flex-1 bg-[#f4f5f7] p-8 min-h-screen font-sans text-gray-900">
 
-      {/* Top Header */}
       <Header />
 
-      {/* Page Title */}
       <div className="flex justify-between items-end mb-8">
         <div>
           <h1 className="text-3xl font-bold mb-1">My Projects</h1>
@@ -79,10 +77,8 @@ export default function MyProjectsPage() {
         </Link>
       </div>
 
-      {/* Search & Filters */}
       <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
         
-        {/* NOVA BARRA DE PESQUISA (Igual à de Equipment) */}
         <div className="relative w-full max-w-md">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -110,7 +106,6 @@ export default function MyProjectsPage() {
         </div>
       </div>
 
-      {/* Projects */}
       {loading ? (
         <div className="flex flex-col gap-6">
           {[...Array(3)].map((_, i) => (
@@ -182,7 +177,6 @@ function ProjectCard({ project, requisitions }: { project: Project; requisitions
         </div>
       </div>
 
-      {/* Requisitions */}
       {requisitions.length > 0 && (
         <div className="border-t border-gray-100 bg-gray-50/50 p-6 pt-4">
           <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">

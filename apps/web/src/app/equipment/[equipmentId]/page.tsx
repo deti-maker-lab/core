@@ -127,7 +127,6 @@ export default function EquipmentDetailsPage() {
               <DetailRow icon={<DollarSign size={20} />} label="Price"     value={price} />
               <DetailRow icon={<Hash size={20} />}       label="Reference" value={reference} />
               <DetailRow icon={<MapPin size={20} />}     label="Location"  value={location} />
-              <DetailRow icon={<CheckCircle2 size={20} />} label="Condition" value={condition} />
             </div>
           </div>
         </div>

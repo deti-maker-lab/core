@@ -2,6 +2,7 @@
 
 from datetime import datetime, timezone
 from sqlmodel import Session, select
+from typing import Optional, List, Dict
 from db.models import EquipmentModel, Equipment
 from services.snipeit.catalog import get_models
 from services.snipeit.assets import list_assets, get_asset
@@ -24,6 +25,20 @@ def _parse_price(value):
         except ValueError:
             return None
     return None
+
+def _parse_datetime(value) -> Optional[datetime]:
+    if not value:
+        return None
+    if isinstance(value, dict):
+        value = value.get("date") or value.get("datetime")
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value
+    try:
+        return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except Exception:
+        return None
 
 def sync_catalog(session: Session) -> dict:
     """
@@ -80,36 +95,134 @@ def list_catalog(session: Session):
     statement = select(EquipmentModel).order_by(EquipmentModel.name)
     return session.exec(statement).all()
 
-def list_equipment_catalog_from_snipeit():
+def _determine_status(a: dict, session=None) -> str:
+    status_label = a.get("status_label") or {}
+    status_type  = status_label.get("status_type", "")
+    assigned_to  = a.get("assigned_to")
+    snipeit_id   = a.get("id")
+
+    # Archived / undeployable
+    if status_type == "archived":
+        return "retired"
+    if status_type in ("pending", "undeployable"):
+        return "maintenance"
+    if status_type != "deployable":
+        return "maintenance"
+
+    # Checked out — o Snipe-IT já sabe isto
+    if assigned_to:
+        return "checked_out"
+
+    # Verifica reserva ativa na DB local
+    if session and snipeit_id:
+        try:
+            from sqlmodel import select as sel
+            from db.models import (
+                Equipment as EquipLocal,
+                EquipmentRequest,
+                EquipmentRequestItem,
+            )
+
+            local_equip = session.exec(
+                sel(EquipLocal).where(EquipLocal.snipeit_asset_id == snipeit_id)
+            ).first()
+
+            if local_equip:
+                # ← JOIN correto: só conta se a requisição está realmente ativa
+                active_req = session.exec(
+                    sel(EquipmentRequest)
+                    .join(
+                        EquipmentRequestItem,
+                        EquipmentRequestItem.request_id == EquipmentRequest.id
+                    )
+                    .where(EquipmentRequestItem.equipment_id == local_equip.id)
+                    .where(
+                        EquipmentRequest.status.in_(["pending", "reserved"])
+                    )
+                ).first()
+
+                if active_req:
+                    return "reserved"
+
+        except Exception as e:
+            logger.warning(f"Could not check reservation for asset {snipeit_id}: {e}")
+
+    return "available"
+
+def list_equipment_catalog_from_snipeit(session=None):
     paginated = list_assets(limit=500)
     rows = getattr(paginated, "rows", []) or []
-
     result = []
+
     for a in rows:
-        model = a.get("model") or {}
-        category = a.get("category") or {}
-        supplier = a.get("supplier") or {}
-        location = a.get("location") or {}
+        model        = a.get("model") or {}
+        category     = a.get("category") or model.get("category") or {}
+        supplier     = a.get("supplier") or {}
+        location     = a.get("location") or {}
+        rtd_loc      = a.get("rtd_location") or {}
         status_label = a.get("status_label") or {}
-        assigned_to = a.get("assigned_to")
+        snipeit_id   = a.get("id")
+
+        local_status = _determine_status(a, session)
+
+        # Sincroniza na DB local
+        if session and snipeit_id:
+            try:
+                from sqlmodel import select as sel
+                from db.models import Equipment as EquipmentModel
+                local_equip = session.exec(
+                    sel(EquipmentModel).where(EquipmentModel.snipeit_asset_id == snipeit_id)
+                ).first()
+                if local_equip and local_equip.status != local_status:
+                    old_status = local_equip.status
+                    local_equip.status = local_status
+                    local_equip.last_synced_at = datetime.now(timezone.utc)
+                    session.add(local_equip)
+
+                    # Regista no histórico
+                    history = StatusHistory(
+                        entity_type="equipment",
+                        entity_id=local_equip.id,
+                        old_status=old_status,
+                        new_status=local_status,
+                        changed_by=1,
+                        note="Auto-synced from SnipeIT"
+                    )
+                    session.add(history)
+                    logger.info(f"Asset {snipeit_id}: {old_status} → {local_status}")
+            except Exception as e:
+                logger.warning(f"Sync failed for asset {snipeit_id}: {e}")
 
         result.append({
-            "id": a.get("id"), 
-            "model_id": model.get("id"),
-            "model_name": model.get("name"),
-            "name": a.get("name") or model.get("name") or "Unnamed",
-            "asset_tag": a.get("asset_tag"),
-            "serial": a.get("serial"),
-            "category": category.get("name"),
-            "supplier": supplier.get("name"),
-            "price": _parse_price(a.get("purchase_cost")),
-            "status": status_label.get("name", "unknown"),
-            "status_type": status_label.get("status_type"),
-            "location": location.get("name"),
-            "image": a.get("image"),
-            "assigned_to": assigned_to.get("name") if isinstance(assigned_to, dict) else None,
-            "available": status_label.get("status_type") == "deployable" and not assigned_to,
+            "id":              snipeit_id,
+            "model_id":        model.get("id"),
+            "model_name":      model.get("name"),
+            "name":            a.get("name") or model.get("name") or "Unnamed",
+            "asset_tag":       a.get("asset_tag"),
+            "serial":          a.get("serial"),
+            "category":        category.get("name"),
+            "supplier":        supplier.get("name") or (model.get("manufacturer") or {}).get("name"),
+            "price":           _parse_price(a.get("purchase_cost")),
+            "status":          local_status,
+            "snipeit_status":  status_label.get("name", "unknown"),
+            "status_type":     status_label.get("status_type"),
+            "location":        location.get("name") or rtd_loc.get("name"),
+            "image":           a.get("image"),
+            "assigned_to":     (a.get("assigned_to") or {}).get("name"),
+            "available":       local_status == "available",
+            "expected_checkin": (
+                a.get("expected_checkin", {}).get("date")
+                if isinstance(a.get("expected_checkin"), dict)
+                else a.get("expected_checkin")
+            ),
         })
+
+    if session:
+        try:
+            session.commit()
+        except Exception as e:
+            logger.warning(f"Sync commit failed: {e}")
+            session.rollback()
 
     return result
 
