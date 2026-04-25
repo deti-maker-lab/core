@@ -1,7 +1,7 @@
 "use client";
 
 // apps/web/src/app/projects/[projectId]/page.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback} from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -17,7 +17,7 @@ import {
   equipment as equipmentApi,
   auth,
 } from "@/lib/api";
-import type { ProjectDetail, User, RequisitionDetail, EquipmentCatalogItem } from "@/lib/api";
+import type { ProjectDetail, User, Requisition, EquipmentCatalogItem } from "@/lib/api";
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -93,6 +93,7 @@ function EditProjectModal({
   const [linkInput, setLinkInput]     = useState("");
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState<string | null>(null);
+  
 
   const addTag = () => {
     const t = tagInput.trim();
@@ -285,6 +286,7 @@ function RequestEquipmentModal({
   const [loadingCat, setLoadingCat] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
+  const [requisitions, setRequisitions] = useState<Requisition[]>([]);
 
   useEffect(() => {
     equipmentApi.catalog()
@@ -308,7 +310,7 @@ function RequestEquipmentModal({
     try {
       await requisitionsApi.create(
         projectId,
-        items.map((i) => ({ equipment_id: i.id }))
+        items.map((i) => i.id)
       );
       onSubmitted();
       onClose();
@@ -399,7 +401,7 @@ export default function ProjectDetailPage() {
 
   const [project, setProject]             = useState<ProjectDetail | null>(null);
   const [memberUsers, setMemberUsers]     = useState<Record<number, User>>({});
-  const [requisitions, setRequisitions]   = useState<RequisitionDetail[]>([]);
+  const [requisitions, setRequisitions]   = useState<Requisition[]>([]);
   const [catalog, setCatalog]             = useState<Record<number, string>>({});
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState<string | null>(null);
@@ -408,10 +410,26 @@ export default function ProjectDetailPage() {
   const [showReqModal, setShowReqModal]   = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
 
-  const loadRequisitions = async () => {
-    const reqs = await requisitionsApi.listByProject(projectId).catch(() => [] as RequisitionDetail[]);
+  const loadRequisitions = useCallback(async () => {
+    const reqs = await requisitionsApi.listByProject(projectId).catch(() => [] as Requisition[]);
     setRequisitions(reqs);
-  };
+
+    const assetIds = [...new Set(
+      reqs.map((r) => r.snipeit_asset_id).filter((id): id is number => id != null)
+    )];
+    const catMap: Record<number, string> = {};
+    await Promise.allSettled(
+      assetIds.map(async (id) => {
+        try {
+          const asset = await equipmentApi.get(id);
+          catMap[id] = asset.name ?? `Asset #${id}`;
+        } catch {
+          catMap[id] = `Asset #${id}`;
+        }
+      })
+    );
+    setCatalog((prev) => ({ ...prev, ...catMap }));
+  }, [projectId]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -431,13 +449,7 @@ export default function ProjectDetailPage() {
         });
         setMemberUsers(map);
 
-        const reqs = await requisitionsApi.listByProject(projectId).catch(() => [] as RequisitionDetail[]);
-        setRequisitions(reqs);
-
-        const cat = await equipmentApi.catalog().catch(() => []);
-        const catMap: Record<number, string> = {};
-        cat.forEach((m) => { catMap[m.id] = m.name; });
-        setCatalog(catMap);
+        await loadRequisitions();;
 
       } catch (e: any) {
         setError(e.message || "Error loading project");
@@ -475,7 +487,7 @@ export default function ProjectDetailPage() {
           <p className="text-gray-400 max-w-2xl">{project.description || "No description."}</p>
         </div>
 
-        {isMember && (
+        {isMember && ["pending", "active"].includes(project.status) && (
           <div className="flex gap-2">
             {project.status === "active" && (
               <button
@@ -577,31 +589,64 @@ export default function ProjectDetailPage() {
             {requisitions.length === 0 ? (
               <p className="text-sm text-gray-400">No equipment requests.</p>
             ) : (
-              requisitions.map((req) => (
-                <div key={req.id} className="border border-gray-100 rounded-xl p-4 mb-3 bg-gray-50">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-gray-400">Req #{req.id} · {new Date(req.created_at).toLocaleDateString("pt-PT")}</span>
-                    <StatusBadge status={req.status} />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {(req.items ?? []).map((item) => (
-                      <div key={item.id} className="flex items-center justify-between text-sm bg-white rounded-lg px-3 py-2 border border-gray-100">
-                        <div className="flex items-center gap-2">
-                          <Cpu size={14} className="text-gray-300" />
-                          <span className="text-gray-700 font-medium">
-                            {catalog[item.equipment_id] ?? `Equipment #${item.equipment_id}`}
-                          </span>
+              (requisitions as any[]).map((req) => {
+                const now = new Date();
+                const assetName = catalog[req.snipeit_asset_id] ?? `Asset #${req.snipeit_asset_id ?? "?"}`;
+                const requestedDate = new Date(req.created_at).toLocaleDateString("en-GB", {
+                  day: "2-digit", month: "short", year: "numeric",
+                });
+
+                // Determina label e cor do status
+                let statusLabel = req.status;
+                let statusColor = "bg-gray-100 text-gray-500 border-gray-200";
+
+                if (req.status === "pending") {
+                  statusLabel = "Pending";
+                  statusColor = "bg-yellow-50 text-yellow-600 border-yellow-200";
+                } else if (req.status === "reserved") {
+                  statusLabel = "Reserved";
+                  statusColor = "bg-purple-50 text-purple-600 border-purple-200";
+                } else if (req.status === "returned") {
+                  statusLabel = "Returned";
+                  statusColor = "bg-green-50 text-green-600 border-green-200";
+                } else if (req.status === "rejected") {
+                  statusLabel = "Rejected";
+                  statusColor = "bg-red-50 text-red-500 border-red-200";
+                } else if (req.status === "checked_out") {
+                  if (req.expected_checkin) {
+                    const due = new Date(req.expected_checkin);
+                    const isOverdue = due < now;
+                    statusLabel = isOverdue
+                      ? "Overdue"
+                      : `Return by ${due.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`;
+                    statusColor = isOverdue
+                      ? "bg-red-50 text-red-600 border-red-200"
+                      : "bg-orange-50 text-orange-600 border-orange-200";
+                  } else {
+                    statusLabel = "Checked Out";
+                    statusColor = "bg-orange-50 text-orange-600 border-orange-200";
+                  }
+                }
+
+                return (
+                  <div key={req.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mb-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="p-2 bg-white border border-gray-100 rounded-lg shrink-0">
+                        <Cpu size={14} className="text-gray-400" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-semibold text-sm text-gray-800 truncate">{assetName}</div>
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          Requested {requestedDate}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                  {req.rejection_reason && (
-                    <div className="mt-3 text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg border border-red-100">
-                      Rejection reason: {req.rejection_reason}
                     </div>
-                  )}
-                </div>
-              ))
+                    <span className={`ml-4 shrink-0 px-3 py-1 text-[10px] font-bold uppercase rounded-full border ${statusColor}`}>
+                      {statusLabel}
+                    </span>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

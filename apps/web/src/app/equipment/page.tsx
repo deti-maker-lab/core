@@ -1,5 +1,6 @@
 "use client";
 
+// apps/web/src/app/equipment/page.tsx
 import { useEffect, useMemo, useState } from "react";
 import { Search, ChevronDown, ChevronRight, Package } from "lucide-react";
 import Link from "next/link";

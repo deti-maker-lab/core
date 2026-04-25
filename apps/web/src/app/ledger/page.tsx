@@ -1,123 +1,171 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ledger as ledgerApi, type LedgerEntry } from "@/lib/api";
-import { ArrowRight, FolderOpen, Cpu, Activity } from "lucide-react";
+// apps/web/src/app/ledger/page.tsx
+import { useEffect, useState, useMemo } from "react";
+import { Link2, ArrowRight, Search } from "lucide-react";
+import Header from "@/app/components/header";
+import {
+  requisitions as requisitionsApi,
+  projects as projectsApi,
+  users as usersApi,
+  equipment as equipmentApi,
+  type Requisition,
+} from "@/lib/api";
 
-const entityIcon: Record<string, React.ReactNode> = {
-  project:           <FolderOpen size={14} className="text-blue-400" />,
-  equipment_request: <Cpu size={14} className="text-purple-400" />,
-  equipment_usage:   <Activity size={14} className="text-teal-400" />,
-  equipment:         <Cpu size={14} className="text-gray-400" />,
-};
-
-const statusColor: Record<string, string> = {
-  active:             "bg-green-50 text-green-600",
-  pending:            "bg-yellow-50 text-yellow-600",
-  reserved:           "bg-purple-50 text-purple-600",
-  checked_out:        "bg-orange-50 text-orange-500",
-  available:          "bg-teal-50 text-teal-600",
-  returned:           "bg-blue-50 text-blue-500",
-  rejected:           "bg-red-50 text-red-500",
-  fulfilled:          "bg-teal-50 text-teal-600",
-  partially_fulfilled:"bg-orange-50 text-orange-400",
-};
-
-function StatusPill({ status }: { status?: string }) {
-  if (!status) return <span className="text-gray-300 text-xs">—</span>;
-  return (
-    <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full ${statusColor[status] ?? "bg-gray-100 text-gray-500"}`}>
-      {status.replace("_", " ")}
-    </span>
-  );
+interface LedgerEvent {
+  key: string;
+  type: "checkout" | "return";
+  date: string;
+  projectName: string;
+  userName: string;
+  assetName: string;
+  snipeit_asset_id?: number;
+  req_id: number;
 }
 
 export default function LedgerPage() {
-  const [entries, setEntries] = useState<LedgerEntry[]>([]);
+  const [events, setEvents]   = useState<LedgerEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [offset, setOffset]   = useState(0);
-  const LIMIT = 20;
+  const [search, setSearch]   = useState("");
 
   useEffect(() => {
-    ledgerApi.list(LIMIT, offset)
-      .then((data) => setEntries((prev) => offset === 0 ? data : [...prev, ...data]))
-      .finally(() => setLoading(false));
-  }, [offset]);
+    (async () => {
+      try {
+        const allReqs = await requisitionsApi.list() as Requisition[];
+        const relevant = allReqs.filter((r) => r.checked_out_at || r.returned_at);
+
+        const projectIds = [...new Set(relevant.map((r) => r.project_id))];
+        const userIds    = [...new Set(relevant.map((r) => r.requested_by))];
+        const assetIds   = [...new Set(
+          relevant.map((r) => r.snipeit_asset_id).filter((id): id is number => id != null)
+        )];
+
+        const [projResults, userResults, assetResults] = await Promise.all([
+          Promise.allSettled(projectIds.map((id) => projectsApi.get(id))),
+          Promise.allSettled(userIds.map((id) => usersApi.get(id))),
+          Promise.allSettled(assetIds.map((id) => equipmentApi.get(id))),
+        ]);
+
+        const pNames: Record<number, string> = {};
+        projResults.forEach((r, i) => {
+          if (r.status === "fulfilled") pNames[projectIds[i]] = r.value.name;
+        });
+
+        const uNames: Record<number, string> = {};
+        userResults.forEach((r, i) => {
+          if (r.status === "fulfilled") uNames[userIds[i]] = r.value.name;
+        });
+
+        const aNames: Record<number, string> = {};
+        assetResults.forEach((r, i) => {
+          if (r.status === "fulfilled") aNames[assetIds[i]] = r.value.name ?? `Asset #${assetIds[i]}`;
+        });
+
+        const evts: LedgerEvent[] = [];
+        for (const req of relevant) {
+          const projectName = pNames[req.project_id]   ?? `Project #${req.project_id}`;
+          const userName    = uNames[req.requested_by] ?? `User #${req.requested_by}`;
+          const assetName   = req.snipeit_asset_id
+            ? (aNames[req.snipeit_asset_id] ?? `Asset #${req.snipeit_asset_id}`)
+            : "Unknown asset";
+
+          if (req.checked_out_at) {
+            evts.push({ key: `checkout-${req.id}`, type: "checkout", date: req.checked_out_at, projectName, userName, assetName, snipeit_asset_id: req.snipeit_asset_id, req_id: req.id });
+          }
+          if (req.returned_at) {
+            evts.push({ key: `return-${req.id}`, type: "return", date: req.returned_at, projectName, userName, assetName, snipeit_asset_id: req.snipeit_asset_id, req_id: req.id });
+          }
+        }
+
+        evts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setEvents(evts);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return events;
+    const q = search.toLowerCase();
+    return events.filter((e) =>
+      e.assetName.toLowerCase().includes(q) ||
+      e.userName.toLowerCase().includes(q) ||
+      e.projectName.toLowerCase().includes(q)
+    );
+  }, [events, search]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Ledger</h1>
-        <p className="text-gray-400 text-sm">Full history of status changes across projects and equipment</p>
+    <main className="flex-1 p-8 bg-[#f4f5f7] min-h-screen font-sans text-gray-900">
+      <Header />
+
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-1 text-gray-900">Ledger</h1>
+        <p className="text-gray-500 text-sm">Immutable record of all equipment transactions</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-        {/* Header */}
-        <div className="grid grid-cols-12 px-6 py-3 bg-gray-50 border-b border-gray-100 text-[10px] font-bold uppercase tracking-wider text-gray-400">
-          <div className="col-span-2">Type</div>
-          <div className="col-span-2">From</div>
-          <div className="col-span-1"></div>
-          <div className="col-span-2">To</div>
-          <div className="col-span-2">Changed by</div>
-          <div className="col-span-2">Date</div>
-          <div className="col-span-1">Note</div>
+      <div className="relative mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+        <input
+          type="text"
+          placeholder="Search by equipment, user, or project..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full sm:w-[450px] pl-10 pr-4 py-2 bg-white border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+        />
+      </div>
+
+      {loading ? (
+        <div className="text-gray-400 animate-pulse">Loading ledger...</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-20 text-gray-400">
+          {search ? "No results found." : "No checkout or return events yet."}
         </div>
-
-        {loading && offset === 0 ? (
-          <div className="px-6 py-12 text-center text-gray-400 text-sm animate-pulse">Loading...</div>
-        ) : entries.length === 0 ? (
-          <div className="px-6 py-12 text-center text-gray-400 text-sm">No history yet.</div>
-        ) : (
-          entries.map((entry) => (
-            <div key={entry.id} className="grid grid-cols-12 px-6 py-4 border-b border-gray-50 last:border-0 items-center hover:bg-gray-50 transition-colors">
-              <div className="col-span-2 flex items-center gap-2">
-                {entityIcon[entry.entity_type] ?? <Activity size={14} className="text-gray-400" />}
-                <div>
-                    <div className="text-xs font-semibold text-gray-700 capitalize">
-                    {entry.entity_type.replace(/_/g, " ")}
-                    </div>
-                    <div className="text-[10px] text-gray-400 truncate max-w-[120px]" title={entry.entity_name ?? ""}>
-                    {entry.entity_name ?? `#${entry.entity_id}`}
-                    </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {filtered.map((evt) => {
+            const isCheckout = evt.type === "checkout";
+            return (
+              <div key={evt.key} className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4 shadow-sm">
+                <div className="flex flex-col items-center shrink-0 self-stretch">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center">
+                    <Link2 size={18} strokeWidth={2.5} />
+                  </div>
+                  <div className="w-px flex-1 bg-gray-200 mt-2 min-h-[16px]" />
                 </div>
-            </div>
-              <div className="col-span-2">
-                <StatusPill status={entry.old_status ?? undefined} />
-              </div>
-              <div className="col-span-1 flex justify-center">
-                <ArrowRight size={14} className="text-gray-300" />
-              </div>
-              <div className="col-span-2">
-                <StatusPill status={entry.new_status} />
-              </div>
-              <div className="col-span-2 text-xs text-gray-600 font-medium truncate">
-                {entry.changed_by}
-              </div>
-              <div className="col-span-2 text-xs text-gray-400">
-                {new Date(entry.changed_at).toLocaleDateString("pt-PT", {
-                  day: "numeric", month: "short", year: "numeric",
-                  hour: "2-digit", minute: "2-digit"
-                })}
-              </div>
-              <div className="col-span-1 text-xs text-gray-400 truncate" title={entry.note ?? ""}>
-                {entry.note ?? "—"}
-              </div>
-            </div>
-          ))
-        )}
 
-        {/* Load more */}
-        {entries.length >= LIMIT && (
-          <div className="px-6 py-4 flex justify-center border-t border-gray-50">
-            <button
-              onClick={() => setOffset((o) => o + LIMIT)}
-              className="text-sm font-semibold text-gray-500 hover:text-gray-800 transition-colors"
-            >
-              Load more
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-semibold ${
+                      isCheckout ? "bg-amber-100/60 text-amber-700" : "bg-emerald-100/60 text-emerald-700"
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${isCheckout ? "bg-amber-500" : "bg-emerald-500"}`} />
+                      {evt.type}
+                    </span>
+                    <span className="text-[16px] font-bold text-gray-900 truncate">{evt.assetName}</span>
+                  </div>
+                  <div className="flex items-center text-[14px] text-gray-500">
+                    <span>{evt.userName}</span>
+                    <ArrowRight size={14} className="mx-2 text-gray-400 shrink-0" />
+                    <span>{evt.projectName}</span>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <div className="text-[14px] text-gray-500 font-medium">
+                    {new Date(evt.date).toLocaleString("en-US", {
+                      month: "short", day: "numeric", year: "numeric",
+                      hour: "2-digit", minute: "2-digit", hour12: false,
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </main>
   );
 }

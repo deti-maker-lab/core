@@ -8,8 +8,7 @@ import {
   equipment as equipmentApi,
   users as usersApi,
   type Project,
-  type RequisitionDetail,
-  type EquipmentCatalogItem,
+  type Requisition,
 } from "@/lib/api";
 import Header from "@/app/components/header";
 import { useTranslation } from "react-i18next";
@@ -17,7 +16,7 @@ import { useTranslation } from "react-i18next";
 export default function TechnicianPortal() {
   const { t } = useTranslation();
   const [pendingProjects, setPendingProjects] = useState<Project[]>([]);
-  const [pendingReqs, setPendingReqs]         = useState<RequisitionDetail[]>([]);
+  const [pendingReqs, setPendingReqs]         = useState<Requisition[]>([]);
   const [recentActions, setRecentActions]     = useState<Project[]>([]);
   const [projectMembers, setProjectMembers]   = useState<Record<number, number>>({});
   const [projectNames, setProjectNames]       = useState<Record<number, string>>({});
@@ -56,18 +55,25 @@ export default function TechnicianPortal() {
       );
       setProjectMembers(memberCounts);
 
-      const pendingRequis = allReqs.filter((r) => r.status === "pending");
+      // Requisitions pendentes — agora uma por equipamento
+      const pendingRequis = (allReqs as Requisition[]).filter((r) => r.status === "pending");
       setPendingReqs(pendingRequis);
 
-      const allItems = pendingRequis.flatMap((r) => r.items.filter((i) => i.equipment_id));
+      // Carrega nomes dos assets diretamente pelo snipeit_asset_id
+      const assetIds = [...new Set(
+        pendingRequis
+          .map((r) => r.snipeit_asset_id)
+          .filter((id): id is number => id != null)
+      )];
+
       const eNames: Record<number, string> = {};
       await Promise.allSettled(
-        allItems.map(async (item) => {
+        assetIds.map(async (assetId) => {
           try {
-            const asset = await equipmentApi.get(item.equipment_id!);
-            eNames[item.equipment_id!] = asset.name ?? `Asset #${item.equipment_id}`;
+            const asset = await equipmentApi.get(assetId);
+            eNames[assetId] = asset.name ?? `Asset #${assetId}`;
           } catch {
-            eNames[item.equipment_id!] = `Asset #${item.equipment_id}`;
+            eNames[assetId] = `Asset #${assetId}`;
           }
         })
       );
@@ -96,7 +102,18 @@ export default function TechnicianPortal() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    const interval = setInterval(async () => {
+      try {
+        await requisitionsApi.syncSnipeit();
+        await load();
+      } catch (e) {
+        console.error("Sync failed", e);
+      }
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   const handleConfirm = async () => {
     if (!confirmModal) return;
@@ -116,12 +133,12 @@ export default function TechnicianPortal() {
     } finally { setActing(false); }
   };
 
-  const reqProjectPending = (req: RequisitionDetail) =>
+  const reqProjectPending = (req: Requisition) =>
     pendingProjects.some((p) => p.id === req.project_id);
 
   return (
     <main className="flex-1 p-8 bg-[#f4f5f7] min-h-screen font-sans text-gray-900">
-      <Header/>
+      <Header />
 
       <div className="mb-10">
         <h1 className="text-3xl font-bold mb-2">{t("admin.title")}</h1>
@@ -133,6 +150,7 @@ export default function TechnicianPortal() {
       ) : (
         <div className="flex flex-col gap-10">
 
+          {/* Pending Projects */}
           <section>
             <div className="flex items-center gap-3 mb-4">
               <Folder size={24} className="text-gray-600" />
@@ -186,9 +204,9 @@ export default function TechnicianPortal() {
 
                   {proj.tags && (
                     <div className="flex gap-2 mt-3 flex-wrap">
-                      {proj.tags.split(",").map((t) => (
-                        <span key={t} className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full">
-                          {t.trim()}
+                      {proj.tags.split(",").map((tag) => (
+                        <span key={tag} className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-bold rounded-full">
+                          {tag.trim()}
                         </span>
                       ))}
                     </div>
@@ -198,6 +216,7 @@ export default function TechnicianPortal() {
             )}
           </section>
 
+          {/* Pending Equipment Requests — uma card por request/equipamento */}
           <section>
             <div className="flex items-center gap-3 mb-4">
               <Cpu size={24} className="text-gray-600" />
@@ -211,9 +230,13 @@ export default function TechnicianPortal() {
               <p className="text-gray-400 text-sm">{t("admin.noPendingEquipmentRequests")}</p>
             ) : (
               pendingReqs.map((req) => {
+                {console.log(req)}
                 const blocked = reqProjectPending(req);
                 const projectName = projectNames[req.project_id] ?? `Project #${req.project_id}`;
                 const requesterName = userNames[req.requested_by] ?? `User #${req.requested_by}`;
+                const assetName = req.snipeit_asset_id
+                  ? (equipmentNames[req.snipeit_asset_id] ?? `Asset #${req.snipeit_asset_id}`)
+                  : "Unknown asset";
 
                 return (
                   <div key={req.id} className={`bg-white border rounded-2xl p-6 shadow-sm mb-4 ${blocked ? "border-yellow-200" : "border-gray-200"}`}>
@@ -224,27 +247,23 @@ export default function TechnicianPortal() {
                       </div>
                     )}
 
-                    <div className="flex justify-between items-start gap-4">
+                    <div className="flex justify-between items-center gap-4">
                       <div className="flex-1">
-                        <div className="font-bold text-gray-800 mb-1">
-                          {projectName}
-                        </div>
+                        <div className="font-bold text-gray-800 mb-1">{projectName}</div>
                         <div className="text-sm text-gray-400 mb-3">
                           {t("admin.requestedBy")} <span className="font-medium text-gray-600">{requesterName}</span>
                           {" · "}{new Date(req.created_at).toLocaleDateString("pt-PT")}
                         </div>
 
-                        <div className="flex flex-col gap-1.5">
-                          {req.items.map((item) => (
-                            <div key={item.id} className="flex items-center gap-2 text-sm">
-                              <div className="p-1.5 bg-gray-50 border border-gray-100 rounded-lg">
-                                <Cpu size={12} className="text-gray-400" />
-                              </div>
-                              <span className="text-gray-700 font-medium">
-                                {equipmentNames[item.equipment_id!] ?? `Asset #${item.equipment_id}`}
-                              </span>
-                            </div>
-                          ))}
+                        {/* Um único equipamento por request */}
+                        <div className="flex items-center gap-2 text-sm">
+                          <div className="p-1.5 bg-gray-50 border border-gray-100 rounded-lg">
+                            <Cpu size={12} className="text-gray-400" />
+                          </div>
+                          <span className="text-gray-700 font-medium">{assetName}</span>
+                          {req.snipeit_asset_id && (
+                            <span className="text-xs text-gray-400 font-mono">#{req.snipeit_asset_id}</span>
+                          )}
                         </div>
                       </div>
 
@@ -273,6 +292,7 @@ export default function TechnicianPortal() {
             )}
           </section>
 
+          {/* Recently Actioned */}
           <section>
             <h2 className="text-lg font-bold mb-4">{t("admin.recentlyActioned")}</h2>
             {recentActions.length === 0 ? (
@@ -292,7 +312,7 @@ export default function TechnicianPortal() {
                       ? "bg-green-50 border-green-100 text-green-600"
                       : "bg-red-50 border-red-100 text-red-500"
                   }`}>
-                    {t(`statistics.status.${p.status}`, p.status)}
+                    {p.status}
                   </span>
                 </div>
               ))
@@ -301,6 +321,7 @@ export default function TechnicianPortal() {
         </div>
       )}
 
+      {/* Confirm Modal */}
       {confirmModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white w-full max-w-md rounded-[24px] p-8 shadow-xl">
@@ -308,8 +329,8 @@ export default function TechnicianPortal() {
               {confirmModal.type.startsWith("approve") ? t("admin.confirmApproval") : t("admin.confirmRejection")}
             </h2>
             <p className="text-gray-500 mb-6">
-              {confirmModal.type.startsWith("approve") ? t("admin.confirmApproveText") + " " : t("admin.confirmRejectText") + " "}
-              <span className="font-semibold text-gray-700">{confirmModal.name}</span>?
+              {confirmModal.type.startsWith("approve") ? t("admin.confirmApproveText") : t("admin.confirmRejectText")}
+              {" "}<span className="font-semibold text-gray-700">{confirmModal.name}</span>?
             </p>
             <div className="flex justify-end gap-3">
               <button

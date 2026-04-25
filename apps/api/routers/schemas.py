@@ -69,15 +69,20 @@ class RequisitionItemCreate(BaseModel):
     equipment_id: int
 
 class RequisitionCreate(BaseModel):
-    items: List[RequisitionItemCreate]
+    items: List[int]
 
 class RequisitionRead(BaseModel):
     id: int
     project_id: int
     requested_by: int
+    snipeit_asset_id: Optional[int] = None
     status: str
+    rejection_reason: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    checked_out_at: Optional[datetime] = None
+    returned_at: Optional[datetime] = None
     created_at: datetime
-    
+
     class Config:
         from_attributes = True
 

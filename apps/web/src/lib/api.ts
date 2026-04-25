@@ -71,14 +71,14 @@ export const equipment = {
 // ─── Requisitions ────────────────────────────────────────────────────────────
 
 export const requisitions = {
-  list: () => request<RequisitionDetail[]>("/requisitions"),
-  get: (id: number) => request<RequisitionDetail>(`/requisitions/${id}`),
+  list: () => request<Requisition[]>("/requisitions"),
+  get: (id: number) => request<Requisition>(`/requisitions/${id}`),
   listByProject: (projectId: number) =>
-    request<RequisitionDetail[]>(`/projects/${projectId}/requisitions`),
-  create: (projectId: number, items: RequisitionItem[]) =>
-    request<Requisition>(`/projects/${projectId}/requisitions`, {
+    request<Requisition[]>(`/projects/${projectId}/requisitions`),
+  create: (projectId: number, snipeitAssetIds: number[]) =>
+    request<Requisition[]>(`/projects/${projectId}/requisitions`, {
       method: "POST",
-      body: JSON.stringify({ items }),
+      body: JSON.stringify({ items: snipeitAssetIds }),
     }),
   approve: (id: number) =>
     request<Requisition>(`/requisitions/${id}/approve`, { method: "POST" }),
@@ -87,6 +87,8 @@ export const requisitions = {
       method: "POST",
       body: JSON.stringify({ reason }),
     }),
+  syncSnipeit: () =>
+    request("/requisitions/sync-snipeit", { method: "POST" }),
 };
 
 // ─── Users ───────────────────────────────────────────────────────────────────
@@ -105,12 +107,6 @@ export const notifications = {
   list: () => request<Notification[]>("/users/me/notifications"),
   markRead: (id: number) =>
     request<{ ok: boolean }>(`/users/me/notifications/${id}/read`, { method: "POST" }),
-};
-
-
-export const ledger = {
-  list: (limit = 50, offset = 0) =>
-    request<LedgerEntry[]>(`/ledger?limit=${limit}&offset=${offset}`),
 };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -221,10 +217,14 @@ export interface Requisition {
   id: number;
   project_id: number;
   requested_by: number;
+  snipeit_asset_id?: number;
   status: string;
-  created_at: string;
   rejection_reason?: string;
   approved_at?: string;
+  checked_out_at?: string;
+  returned_at?: string;
+  expected_checkin?: string;
+  created_at: string;
 }
 
 export interface RequisitionDetail extends Requisition {
@@ -240,15 +240,4 @@ export interface Notification {
   reference_id?: number;
   is_read: boolean;
   created_at: string;
-}
-
-export interface LedgerEntry {
-  id: number;
-  entity_type: string;
-  entity_id: number;
-  old_status?: string;
-  new_status: string;
-  changed_by: string;
-  changed_at: string;
-  note?: string;
 }

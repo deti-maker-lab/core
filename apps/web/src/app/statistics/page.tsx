@@ -1,9 +1,9 @@
-// app/statistics/page.tsx
 "use client";
 
+// app/statistics/page.tsx
 import { useEffect, useState } from "react";
 import { projects as projectsApi, equipment as equipmentApi, users as usersApi, requisitions as requisitionsApi } from "@/lib/api";
-import type { Project, EquipmentCatalogItem, User, RequisitionDetail } from "@/lib/api";
+import type { Project, EquipmentCatalogItem, User, Requisition } from "@/lib/api";
 import { FolderOpen, Cpu, Users, TrendingUp, CheckCircle2, BarChart2 } from "lucide-react";
 import Header from "@/app/components/header";
 import { useTranslation } from "react-i18next";
@@ -39,7 +39,7 @@ export default function StatisticsPage() {
   const [projects, setProjects]       = useState<Project[]>([]);
   const [equipment, setEquipment]     = useState<EquipmentCatalogItem[]>([]);
   const [users, setUsers]             = useState<User[]>([]);
-  const [requisitions, setRequisitions] = useState<RequisitionDetail[]>([]);
+  const [requisitions, setRequisitions] = useState<Requisition[]>([]);
   const [loading, setLoading]         = useState(true);
 
   useEffect(() => {
@@ -68,9 +68,11 @@ export default function StatisticsPage() {
   const professors   = users.filter((u) => u.role === "professor").length;
   const technicians  = users.filter((u) => u.role === "lab_technician").length;
 
-  const pendingReqs   = requisitions.filter((r) => r.status === "pending").length;
-  const reservedReqs  = requisitions.filter((r) => r.status === "reserved").length;
-  const fulfilledReqs = requisitions.filter((r) => r.status === "fulfilled").length;
+  const pendingReqs    = requisitions.filter((r) => r.status === "pending").length;
+const reservedReqs   = requisitions.filter((r) => r.status === "reserved").length;
+const checkedOutReqs = requisitions.filter((r) => r.status === "checked_out").length;
+const returnedReqs   = requisitions.filter((r) => r.status === "returned").length;
+const rejectedReqs   = requisitions.filter((r) => r.status === "rejected").length;
 
   const courseCounts: Record<string, number> = {};
   projects.forEach((p) => { if (p.course) courseCounts[p.course] = (courseCounts[p.course] ?? 0) + 1; });
@@ -214,12 +216,13 @@ export default function StatisticsPage() {
             <div className="p-2 bg-gray-50 rounded-lg"><CheckCircle2 size={18} className="text-gray-500" /></div>
             <h2 className="font-bold text-lg text-gray-800">{t("statistics.reqSummary")}</h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             {[
-              { label: t("statistics.status.pending"),   value: pendingReqs,                                              color: "bg-yellow-50 text-yellow-600 border border-yellow-100" },
-              { label: t("statistics.status.reserved"),  value: reservedReqs,                                             color: "bg-purple-50 text-purple-600 border border-purple-100" },
-              { label: t("statistics.status.fulfilled"), value: fulfilledReqs,                                            color: "bg-teal-50 text-teal-600 border border-teal-100" },
-              { label: t("statistics.status.rejected"),  value: requisitions.filter((r) => r.status === "rejected").length, color: "bg-red-50 text-red-600 border border-red-100" },
+              { label: "Pending",     value: pendingReqs,    color: "bg-yellow-50 text-yellow-600 border border-yellow-100" },
+              { label: "Reserved",    value: reservedReqs,   color: "bg-purple-50 text-purple-600 border border-purple-100" },
+              { label: "Checked Out", value: checkedOutReqs, color: "bg-orange-50 text-orange-600 border border-orange-100" },
+              { label: "Returned",    value: returnedReqs,   color: "bg-green-50 text-green-600 border border-green-100" },
+              { label: "Rejected",    value: rejectedReqs,   color: "bg-red-50 text-red-600 border border-red-100" },
             ].map(({ label, value, color }, idx) => (
               <div key={idx} className={`rounded-2xl p-6 text-center shadow-sm hover:-translate-y-1 hover:shadow-md transition-all cursor-default ${color}`}>
                 <div className="text-4xl font-black mb-2">{value}</div>

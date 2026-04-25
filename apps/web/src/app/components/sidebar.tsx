@@ -44,7 +44,7 @@ export default function Sidebar() {
     { name: t("sidebar.equipment"), href: "/equipment", icon: <Cpu size={22} /> },
     { name: t("sidebar.users"), href: "/users", icon: <Users size={22} /> },
     { name: t("sidebar.statistics"), href: "/statistics", icon: <BarChart3 size={22} /> },
-    //{ name: t("sidebar.ledger"), href: "/ledger", icon: <BookText size={22} /> },
+    { name: t("sidebar.ledger"), href: "/ledger", icon: <BookText size={22} /> },
   ];
 
   function handleLogout() {

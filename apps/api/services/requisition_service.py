@@ -1,186 +1,87 @@
-# apps/api/services/requisition_service.py
-
 import os
 from datetime import datetime, timezone
-from typing import List, Dict, Tuple
+from typing import List
 from sqlmodel import Session, select
-from db.models import (
-    EquipmentRequest, 
-    EquipmentRequestItem, 
-    EquipmentUsage, 
-    StatusHistory, 
-    Equipment, 
-    EquipmentModel,
-    User,
-    Project
-)
-from services.constants import *
-from services.snipeit.assets import get_asset, checkout_asset, checkin_asset
-from services.snipeit.users import get_user_by_email
-from services.snipeit.exceptions import SnipeITAPIError, SnipeITAssetUnavailableError
-from services.inventory_service import sync_equipment
+from db.models import EquipmentRequest, Project, User, StatusHistory
 from services.notification_service import notify_project_members
 import logging
 
 logger = logging.getLogger(__name__)
 
-def _add_history(session: Session, entity_type: str, entity_id: int, old_status: str, new_status: str, changed_by: int, note: str = None):
-    history = StatusHistory(
-        entity_type=entity_type,
+RESERVED_STATUS_ID = int(os.getenv("SNIPEIT_RESERVED_STATUS_ID", "4"))
+
+def _add_history(session, entity_id, old_status, new_status, changed_by, note=None):
+    session.add(StatusHistory(
+        entity_type="equipment_request",
         entity_id=entity_id,
         old_status=old_status,
         new_status=new_status,
         changed_by=changed_by,
-        note=note
-    )
-    session.add(history)
-    
+        note=note,
+    ))
 
 def create_requisition(session: Session, project_id: int, user_id: int,
-                       items_data: List[Dict]) -> EquipmentRequest:
+                       snipeit_asset_ids: List[int]) -> List[EquipmentRequest]:
     project = session.get(Project, project_id)
     if not project:
         raise ValueError("Project not found")
+    if not snipeit_asset_ids:
+        raise ValueError("At least one equipment item is required")
 
-    req = EquipmentRequest(
-        project_id=project_id,
-        requested_by=user_id,
-        status="pending"
-    )
-    session.add(req)
-    session.flush()
-
-    for item in items_data:
-        snipeit_asset_id = item["equipment_id"]
-
-        local_equip = session.exec(
-            select(Equipment).where(Equipment.snipeit_asset_id == snipeit_asset_id)
-        ).first()
-
-        if not local_equip:
-            try:
-                from services.snipeit.assets import get_asset
-                snipe_asset = get_asset(snipeit_asset_id)
-                snipe_model_id = snipe_asset.model.id if snipe_asset.model else None
-
-                local_model = None
-                if snipe_model_id:
-                    local_model = session.exec(
-                        select(EquipmentModel).where(EquipmentModel.snipeit_model_id == snipe_model_id)
-                    ).first()
-
-                if not local_model:
-                    local_model = EquipmentModel(
-                        name=snipe_asset.model.name if snipe_asset.model else f"Model #{snipe_model_id}",
-                        snipeit_model_id=snipe_model_id,
-                    )
-                    session.add(local_model)
-                    session.flush()
-
-                local_equip = Equipment(
-                    model_id=local_model.id,
-                    snipeit_asset_id=snipeit_asset_id,
-                    status="available",
-                )
-                session.add(local_equip)
-                session.flush()
-                logger.info(f"Created local equipment for snipeit_asset_id={snipeit_asset_id}")
-
-            except Exception as e:
-                logger.error(f"Failed to resolve snipeit asset {snipeit_asset_id}: {e}")
-                raise ValueError(f"Could not resolve equipment {snipeit_asset_id}: {e}")
-
-        req_item = EquipmentRequestItem(
-            request_id=req.id,
-            equipment_id=local_equip.id,
+    created = []
+    for asset_id in snipeit_asset_ids:
+        req = EquipmentRequest(
+            project_id=project_id,
+            requested_by=user_id,
+            snipeit_asset_id=asset_id,
+            status="pending",
         )
-        session.add(req_item)
-
-    try:
-        _add_history(session, "equipment_request", req.id, None, "pending", user_id, "Requisition created")
-    except Exception as e:
-        logger.warning(f"Status history error: {e}")
+        session.add(req)
+        session.flush()
+        _add_history(session, req.id, None, "pending", user_id, "Requisition created")
+        created.append(req)
 
     session.commit()
-    session.refresh(req)
-    return req
-
-def _build_req_description(session: Session, req: EquipmentRequest) -> tuple:
-    items = session.exec(
-        select(EquipmentRequestItem).where(EquipmentRequestItem.request_id == req.id)
-    ).all()
-
-    equipment_names = []
-    for item in items:
-        if item.equipment_id is None:
-            continue
-        equip = session.get(Equipment, item.equipment_id)
-        name = f"Equipment #{item.equipment_id}"
-        if equip and equip.snipeit_asset_id:
-            try:
-                from services.snipeit.assets import get_asset
-                asset = get_asset(equip.snipeit_asset_id)
-                if asset and asset.name:
-                    name = asset.name
-            except Exception:
-                pass
-        equipment_names.append(f'"{name}"')
-
-    project = session.get(Project, req.project_id)
-    project_name = project.name if project else f"Project #{req.project_id}"
-    items_str = ", ".join(equipment_names) if equipment_names else "requested equipment"
-    return items_str, project_name
+    for r in created:
+        session.refresh(r)
+    return created
 
 
 def approve_requisition(session: Session, req_id: int, user_id: int) -> EquipmentRequest:
-    RESERVED_STATUS_ID = int(os.getenv("SNIPEIT_RESERVED_STATUS_ID", "4"))
-
     req = session.get(EquipmentRequest, req_id)
     if not req:
         raise ValueError("Requisition not found")
     if req.status != "pending":
         raise ValueError("Only pending requisitions can be approved")
 
-    project = session.get(Project, req.project_id)
-    if not project or project.status != "active":
-        raise ValueError("Project must be active to approve requisitions")
-
-    items = session.exec(
-        select(EquipmentRequestItem).where(EquipmentRequestItem.request_id == req_id)
-    ).all()
-
-    for item in items:
-        equip = session.get(Equipment, item.equipment_id)
-        if not equip:
-            continue
-        equip.status = "reserved"
-
-        if equip.snipeit_asset_id:
-            try:
-                from services.snipeit.client import snipeit_client
-                snipeit_client.patch(
-                    f"/api/v1/hardware/{equip.snipeit_asset_id}",
-                    json_data={"status_id": RESERVED_STATUS_ID}
-                )
-                logger.info(f"SnipeIT asset {equip.snipeit_asset_id} → Reserved")
-            except Exception as e:
-                logger.warning(f"SnipeIT update failed for asset {equip.snipeit_asset_id}: {e}")
+    if req.snipeit_asset_id:
+        try:
+            from services.snipeit.client import snipeit_client
+            snipeit_client.patch(
+                f"/api/v1/hardware/{req.snipeit_asset_id}",
+                json_data={"status_id": RESERVED_STATUS_ID}
+            )
+        except Exception as e:
+            logger.warning(f"Could not update Snipe-IT status for asset {req.snipeit_asset_id}: {e}")
 
     old_status = req.status
     req.status = "reserved"
     req.approved_at = datetime.now(timezone.utc)
+    _add_history(session, req.id, old_status, "reserved", user_id, "Approved")
 
     try:
-        _add_history(session, "equipment_request", req.id, old_status, "reserved", user_id, "Requisition approved")
+        project = session.get(Project, req.project_id)
+        project_name = project.name if project else f"Project #{req.project_id}"
+        notify_project_members(
+            session, req.project_id,
+            title="Equipment request approved",
+            message=f'Your request for asset #{req.snipeit_asset_id} on "{project_name}" was approved.',
+            type="approval",
+            reference_type="equipment_request",
+            reference_id=req.id,
+        )
     except Exception as e:
-        logger.warning(f"Status history error: {e}")
-
-    items_str, project_name = _build_req_description(session, req)
-    notify_project_members(session, req.project_id,
-        title="Equipment request approved",
-        message=f"Your equipment request for {items_str} on project \"{project_name}\" was approved. You can pick it up at the lab!",
-        type="approval",
-        reference_type="equipment_request", reference_id=req.id)
+        logger.warning(f"Notification failed: {e}")
 
     session.commit()
     session.refresh(req)
@@ -197,146 +98,94 @@ def reject_requisition(session: Session, req_id: int, user_id: int, reason: str)
     old_status = req.status
     req.status = "rejected"
     req.rejection_reason = reason
+    _add_history(session, req.id, old_status, "rejected", user_id, f"Rejected: {reason}")
 
     try:
-        _add_history(session, "equipment_request", req.id, old_status, "rejected", user_id, f"Rejected: {reason}")
+        project = session.get(Project, req.project_id)
+        project_name = project.name if project else f"Project #{req.project_id}"
+        notify_project_members(
+            session, req.project_id,
+            title="Equipment request rejected",
+            message=f'Your request for asset #{req.snipeit_asset_id} on "{project_name}" was rejected. Reason: {reason}',
+            type="warning",
+            reference_type="equipment_request",
+            reference_id=req.id,
+        )
     except Exception as e:
-        logger.warning(f"Status history error: {e}")
-
-    items_str, project_name = _build_req_description(session, req)
-    notify_project_members(session, req.project_id,
-        title="Equipment request rejected",
-        message=f"Your equipment request for {items_str} on project \"{project_name}\" was rejected. Reason: {reason}",
-        type="warning",
-        reference_type="equipment_request", reference_id=req.id)
+        logger.warning(f"Notification failed: {e}")
 
     session.commit()
     session.refresh(req)
     return req
 
 
-def assign_asset_to_requisition(session: Session, req_id: int, req_item_id: int, snipeit_asset_id: int, user_id: int) -> EquipmentUsage:
-    """
-    Checks out an asset in Snipe-IT and links it locally.
-    Uses target user from the Requisition's requestor to find them in Snipe-IT.
-    """
-    req = session.get(EquipmentRequest, req_id)
-    if not req or req.status not in [REQ_STATUS_APPROVED, REQ_STATUS_PARTIALLY_ASSIGNED]:
-        raise ValueError("Invalid requisition state for assignment")
-        
-    req_item = session.get(EquipmentRequestItem, req_item_id)
-    if not req_item or req_item.request_id != req.id:
-        raise ValueError("Invalid requisition item")
-        
-    # Prevent assigning more than requested
-    statement = select(EquipmentUsage).where(EquipmentUsage.request_item_id == req_item.id)
-    assigned_count = len(session.exec(statement).all())
-    if assigned_count >= req_item.quantity:
-        raise ValueError("Quantity requested already fulfilled for this item")
+def sync_from_snipeit_logs(session: Session) -> dict:
+    from services.snipeit.client import snipeit_client
+    from datetime import date
 
-    # Resolve target user in Snipe-IT
-    requesting_user = session.get(User, req.requested_by)
-    if not requesting_user or not requesting_user.email:
-        raise ValueError("Requesting user has no valid email to map to Snipe-IT")
-        
-    snipeit_user = get_user_by_email(requesting_user.email)
-    if not snipeit_user:
-        raise ValueError(f"Could not find Snipe-IT user matching email: {requesting_user.email}")
-        
-    # Get SnipeIT asset and verify it exists
-    snipe_asset = get_asset(snipeit_asset_id)
-    
-    # Map Snipe-IT asset to local DB
-    statement = select(Equipment).where(Equipment.snipeit_asset_id == snipeit_asset_id)
-    db_equip = session.exec(statement).first()
-    if not db_equip:
-        # Create it if it doesn't exist
-        db_equip = Equipment(
-            model_id=req_item.model_id,
-            snipeit_asset_id=snipeit_asset_id,
-            status="available"
-        )
-        session.add(db_equip)
-        session.flush()
-        
-    # Perform Snipe-IT checkout BEFORE local commit
-    checkout_asset(snipeit_asset_id, snipeit_user.id, f"Checked out for Project {req.project_id}")
-    
-    # Update local equipment fields from Snipe-IT directly since we are assigning
-    db_equip.name = snipe_asset.name
-    db_equip.asset_tag = snipe_asset.asset_tag
-    db_equip.serial = snipe_asset.serial
-    if snipe_asset.status_label:
-        db_equip.status = snipe_asset.status_label.name.lower()
-        
-    # Create Local Usage
-    usage = EquipmentUsage(
-        equipment_id=db_equip.id,
-        project_id=req.project_id,
-        request_item_id=req_item.id,
-        status=USAGE_STATUS_ASSIGNED,
-        asset_name_snapshot=snipe_asset.name,
-        asset_tag_snapshot=snipe_asset.asset_tag,
-        model_name_snapshot=snipe_asset.model.name if snipe_asset.model else None
-    )
-    session.add(usage)
-    
-    # Update Request status
-    old_req_status = req.status
-    # We should calculate if it is now fully assigned, but for now we set partially assigned
-    req.status = REQ_STATUS_PARTIALLY_ASSIGNED 
-    
-    _add_history(session, "equipment_usage", usage.id, None, USAGE_STATUS_ASSIGNED, user_id, f"Assigned SnipeIT Asset {snipeit_asset_id}")
-    
-    session.commit()
-    session.refresh(usage)
-    return usage
+    stats = {"checked_out": 0, "returned": 0, "errors": 0}
 
-
-def return_asset(session: Session, usage_id: int, user_id: int, note: str = None) -> EquipmentUsage:
-    """
-    Checks an asset back into Snipe-IT and updates local records.
-    """
-    usage = session.get(EquipmentUsage, usage_id)
-    if not usage:
-        raise ValueError("Usage record not found")
-        
-    if usage.status == USAGE_STATUS_RETURNED:
-        raise ValueError("Asset is already returned")
-        
-    db_equip = session.get(Equipment, usage.equipment_id)
-    if not db_equip or not db_equip.snipeit_asset_id:
-        raise ValueError("Local equipment record has no Snipe-IT mapping")
-        
-    # Check-in to Snipe-IT
-    checkin_asset(db_equip.snipeit_asset_id, note or "Returned via internal backend.")
-    
-    # Resync the equipment cache to reflect 'available' or whatever state Snipe-IT put it in
     try:
-        sync_equipment(session, db_equip.id)
+        response = snipeit_client.get(
+            "/api/v1/reports/activity",
+            params={"limit": 200}
+        )
+        rows = response.get("rows") or []
     except Exception as e:
-        logger.warning(f"Failed to cleanly sync equipment {db_equip.id} post-return: {e}")
-        db_equip.status = "available"
-    
-    # Update Local Usage
-    usage.status = USAGE_STATUS_RETURNED
-    usage.returned_at = datetime.now(timezone.utc)
-    
-    # Update Equipment
-    db_equip.status = "available"
-    
-    _add_history(session, "equipment_usage", usage.id, USAGE_STATUS_ASSIGNED, USAGE_STATUS_RETURNED, user_id, note)
-    
-    # Optional: logic to check if all items for the Request are returned, to close the requisition.
-    
-    session.commit()
-    session.refresh(usage)
-    return usage
+        logger.error(f"Failed to fetch Snipe-IT activity logs: {e}")
+        return stats
 
-def list_all_requisitions(session: Session) -> List[EquipmentRequest]:
-    return session.exec(
-        select(EquipmentRequest).order_by(EquipmentRequest.created_at.desc())
-    ).all()
+    for row in rows:
+        try:
+            action_type = row.get("action_type", "")
+            item = row.get("item") or {}
+            asset_id = item.get("id") if item.get("type") == "asset" else None
+
+            if not asset_id or action_type not in ("checkout", "checkin from"):
+                continue
+
+            req = session.exec(
+                select(EquipmentRequest)
+                .where(EquipmentRequest.snipeit_asset_id == asset_id)
+                .where(EquipmentRequest.status.in_(["reserved", "checked_out"]))
+            ).first()
+
+            if not req:
+                continue
+
+            if action_type == "checkout" and req.status == "reserved":
+                # Extrai expected_checkin do log_meta
+                log_meta = row.get("log_meta") or {}
+                expected_raw = None
+                if "expected_checkin" in log_meta:
+                    val = log_meta["expected_checkin"]
+                    expected_raw = val.get("new") if isinstance(val, dict) else val
+                
+                req.status = "checked_out"
+                req.checked_out_at = datetime.now(timezone.utc)
+                if expected_raw:
+                    try:
+                        req.expected_checkin = datetime.strptime(expected_raw, "%Y-%m-%d")
+                    except Exception:
+                        pass
+                
+                _add_history(session, req.id, "reserved", "checked_out", 1,
+                             "Auto-synced: checkout detected in Snipe-IT")
+                stats["checked_out"] += 1
+
+            elif action_type == "checkin from" and req.status == "checked_out":
+                req.status = "returned"
+                req.returned_at = datetime.now(timezone.utc)
+                _add_history(session, req.id, "checked_out", "returned", 1,
+                             "Auto-synced: checkin detected in Snipe-IT")
+                stats["returned"] += 1
+
+        except Exception as e:
+            logger.warning(f"Error processing row {row.get('id')}: {e}")
+            stats["errors"] += 1
+
+    session.commit()
+    return stats
 
 
 def list_project_requisitions(session: Session, project_id: int) -> List[EquipmentRequest]:
@@ -347,14 +196,14 @@ def list_project_requisitions(session: Session, project_id: int) -> List[Equipme
     ).all()
 
 
+def list_all_requisitions(session: Session) -> List[EquipmentRequest]:
+    return session.exec(
+        select(EquipmentRequest).order_by(EquipmentRequest.created_at.desc())
+    ).all()
+
+
 def get_requisition(session: Session, req_id: int) -> EquipmentRequest:
     req = session.get(EquipmentRequest, req_id)
     if not req:
         raise ValueError("Requisition not found")
     return req
-
-
-def get_requisition_items(session: Session, req_id: int) -> List[EquipmentRequestItem]:
-    return session.exec(
-        select(EquipmentRequestItem).where(EquipmentRequestItem.request_id == req_id)
-    ).all()

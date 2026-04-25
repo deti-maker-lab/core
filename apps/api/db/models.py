@@ -86,24 +86,18 @@ class Equipment(SQLModel, table=True):
 # =========================================================
 class EquipmentRequest(SQLModel, table=True):
     __tablename__ = "equipment_request"
-
+    
     id: Optional[int] = Field(default=None, primary_key=True, sa_type=BigInteger)
     project_id: int = Field(foreign_key="projects.id", sa_type=BigInteger)
     requested_by: int = Field(foreign_key="users.id", sa_type=BigInteger)
+    snipeit_asset_id: Optional[int] = Field(default=None, sa_type=BigInteger)
     status: str = Field(default="pending", max_length=50)
     rejection_reason: Optional[str] = Field(default=None, sa_column=Column(Text))
     approved_at: Optional[datetime] = Field(default=None)
+    checked_out_at: Optional[datetime] = Field(default=None)
+    returned_at: Optional[datetime] = Field(default=None)
+    expected_checkin: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
-
-# =========================================================
-# EQUIPMENT REQUEST ITEMS
-# =========================================================
-class EquipmentRequestItem(SQLModel, table=True):
-    __tablename__ = "equipment_request_items"
-
-    id: Optional[int] = Field(default=None, primary_key=True, sa_type=BigInteger)
-    request_id: int = Field(foreign_key="equipment_request.id", sa_type=BigInteger)
-    equipment_id: int = Field(foreign_key="equipment.id", sa_type=BigInteger)
 
 # =========================================================
 # EQUIPMENT USAGE
