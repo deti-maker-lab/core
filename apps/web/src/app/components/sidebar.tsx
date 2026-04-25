@@ -59,17 +59,32 @@ export default function Sidebar() {
         isCollapsed ? "w-20" : "w-64"
       }`}
     >
-      <div className={`flex items-center h-20 shrink-0 mb-2 ${isCollapsed ? "justify-center" : "px-6 gap-3"}`}>
-        <div className="flex items-center justify-center shrink-0">
-          <img src="/deti-maker-lab.png" alt="DETI MakerLab" className="w-10 h-10 object-contain" />
-        </div>
+      <Link
+        href="/"
+        aria-label="Go to homepage"
+        className={`flex items-center h-20 shrink-0 mb-2 transition-opacity ${
+          isCollapsed ? "justify-center" : "px-6 gap-3"
+        }`}
+      >
+      <div className="flex items-center justify-center shrink-0">
+        <img
+          src="/deti-maker-lab.png"
+          alt="DETI MakerLab"
+          className="w-10 h-10 object-contain"
+        />
+      </div>
+
         {!isCollapsed && (
           <div className="flex items-center gap-1.5 text-indigo-600 overflow-hidden">
-            <span className="font-bold text-lg leading-tight tracking-tight truncate">DETI</span>
-            <span className="font-bold text-lg leading-tight tracking-tight whitespace-nowrap">Maker Lab</span>
+            <span className="font-bold text-lg leading-tight tracking-tight truncate">
+              DETI
+            </span>
+            <span className="font-bold text-lg leading-tight tracking-tight whitespace-nowrap">
+              Maker Lab
+            </span>
           </div>
         )}
-      </div>
+      </Link>
 
       <div className="w-full h-px bg-gray-100 mb-4 shrink-0" />
 
