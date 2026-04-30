@@ -374,28 +374,20 @@ docker ps
 
 ## 10. Run the project locally
 
-### Run the project - parallel run of backend and frontend
-```bash
-pnpm dev
-```
-From now on, backend should be accessed under `127.0.0.1:8000` and frontend under `localhost:3000`.
+### Development mode (localhost URLs)
 
-Open **separate terminals** in WSL.
+For quick local development, run the backend and frontend separately:
 
-### Terminal 1 — web app
+**Terminal 1 — web app**
 
 ```bash
 cd ~/dev/deti-maker-lab
 pnpm --filter web dev
 ```
 
-Expected URL:
+Expected URL: `http://localhost:3000`
 
-```text
-http://localhost:3000
-```
-
-### Terminal 2 — FastAPI backend
+**Terminal 2 — FastAPI backend**
 
 ```bash
 cd ~/dev/deti-maker-lab/apps/api
@@ -403,36 +395,53 @@ source .venv/bin/activate
 fastapi dev app/main.py --host 0.0.0.0 --port 8000
 ```
 
-Expected URL:
+Expected URL: `http://localhost:8000`
 
-```text
-http://localhost:8000
-```
+Swagger docs: `http://localhost:8000/docs`
 
-Swagger docs:
-
-```text
-http://localhost:8000/docs
-```
-
-### Terminal 3 — mobile app
+**Terminal 3 — mobile app**
 
 ```bash
 cd ~/dev/deti-maker-lab
 pnpm --filter mobile start
 ```
 
-Then:
+Then press `a` for Android emulator, or scan the QR code in Expo Go.
 
-- press `a` for Android emulator, or
-- scan the QR code in Expo Go on a physical Android device
+### Full stack mode (with Docker, nginx, and domain names)
 
-### Terminal 4 — optional migration scripts
+To test the complete system as it runs in production with nginx reverse-proxying:
+
+1. Start Docker containers:
 
 ```bash
-cd ~/dev/deti-maker-lab/apps/migration
-# run only when needed
+docker compose -f infra/docker/docker-compose.yml up -d
 ```
+
+2. Add domain names to your **Windows hosts file** (see [troubleshooting section](###-site-cant-be-reached--dns_probe_finished_nxdomain)):
+
+```
+127.0.0.1  deti-makerlab.ua.pt
+127.0.0.1  inventory.deti-makerlab.ua.pt
+```
+
+3. Access via:
+   - `https://deti-makerlab.ua.pt` — main site
+   - `https://inventory.deti-makerlab.ua.pt` — Snipe-IT inventory
+
+> You'll see a certificate warning for self-signed SSL — click "Advanced" and continue anyway.
+
+---
+
+### Parallel run of backend and frontend
+
+Alternatively, from the repo root:
+
+```bash
+pnpm dev
+```
+
+This starts both services in parallel (if configured in `turbo.json`).
 
 ---
 
@@ -647,6 +656,37 @@ To keep the environment predictable for everyone:
 ---
 
 ## 16. Troubleshooting
+
+### Site can't be reached — `DNS_PROBE_FINISHED_NXDOMAIN`
+
+If you're trying to access `https://deti-makerlab.ua.pt` or `https://inventory.deti-makerlab.ua.pt` but get "This site can't be reached", you need to add the domain names to your Windows **hosts file**.
+
+**Why?** The containers are running in Docker Desktop (which uses WSL2), and nginx is configured to serve the site via domain names with HTTPS. Your Windows browser needs to know where to find these domains.
+
+**Solution:**
+
+1. Open **PowerShell as Administrator** (right-click → "Run as administrator")
+2. Run:
+
+```powershell
+Add-Content -Path "C:\Windows\System32\drivers\etc\hosts" -Value "`n127.0.0.1  deti-makerlab.ua.pt`n127.0.0.1  inventory.deti-makerlab.ua.pt" -Force
+```
+
+3. Flush the DNS cache:
+
+```powershell
+ipconfig /flushdns
+```
+
+4. Close and reopen your browser, then try:
+   - `https://deti-makerlab.ua.pt`
+   - `https://inventory.deti-makerlab.ua.pt`
+
+You'll see a certificate warning (self-signed SSL) — click "Advanced" and continue anyway.
+
+**Note:** If you're doing local development only (not testing the full nginx setup), keep using `http://localhost:3000` and `http://localhost:8000` instead.
+
+---
 
 ### `docker: command not found` inside WSL
 - Check that Docker Desktop is installed
