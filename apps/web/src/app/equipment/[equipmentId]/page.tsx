@@ -1,5 +1,6 @@
 "use client";
 
+// apps/web/src/app/equipment/[equipmentId]/page.tsx
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -50,14 +51,12 @@ export default function EquipmentDetailsPage() {
         const asset = await equipmentApi.get(equipmentId);
         setItem(asset as EquipmentDetail);
 
-        // Busca todas as requisitions deste asset
         const allReqs = await requisitionsApi.list() as Requisition[];
         const assetReqs = allReqs.filter(
           (r) => r.snipeit_asset_id === equipmentId &&
                  ["reserved", "checked_out", "returned"].includes(r.status)
         );
 
-        // Carrega projetos e users únicos
         const projectIds = [...new Set(assetReqs.map((r) => r.project_id))];
         const userIds    = [...new Set(assetReqs.map((r) => r.requested_by))];
 
@@ -83,10 +82,8 @@ export default function EquipmentDetailsPage() {
           if (r.status === "fulfilled") uMap[userIds[i]] = r.value.name;
         });
 
-        // Projetos únicos
         setProjects(Object.values(pMap));
 
-        // Histórico de eventos
         const evts: HistoryEvent[] = [];
         for (const req of assetReqs) {
           const projectName = pMap[req.project_id]?.name ?? `Project #${req.project_id}`;
@@ -136,7 +133,6 @@ export default function EquipmentDetailsPage() {
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left */}
         <div className="flex flex-col gap-6">
           <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-sm bg-white">
             <div className="h-64 bg-gray-50 flex items-center justify-center border-b border-gray-100 overflow-hidden">
@@ -172,10 +168,8 @@ export default function EquipmentDetailsPage() {
           </div>
         </div>
 
-        {/* Right */}
         <div className="flex flex-col gap-6">
 
-          {/* Projects */}
           <div className="border border-gray-200 rounded-2xl p-6 shadow-sm bg-white">
             <div className="flex items-center gap-2 mb-6">
               <FolderOpen size={20} className="text-gray-400" />
@@ -200,7 +194,6 @@ export default function EquipmentDetailsPage() {
             )}
           </div>
 
-          {/* Full History */}
           <div className="border border-gray-200 rounded-2xl p-6 shadow-sm bg-white">
             <div className="flex items-center gap-2 mb-6">
               <History size={20} className="text-gray-400" />

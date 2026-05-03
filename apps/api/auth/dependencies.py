@@ -1,8 +1,9 @@
 # apps/api/auth/router.py
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlmodel import select, Session
+from typing import Optional
 from db.database import get_session
 from db.models import User
 from core.config import settings
@@ -41,7 +42,12 @@ def require_roles(*roles: str):
         return current_user
     return dependency
 
-
 require_any        = get_current_user
 require_user       = require_roles("student", "professor")
 require_lab_tech   = require_roles("lab_technician")
+
+def require_optional(request: Request) -> Optional[User]:
+    try:
+        return require_any(request)
+    except Exception:
+        return None

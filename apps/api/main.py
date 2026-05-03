@@ -8,8 +8,23 @@ from routers.equipment import router as equipment_router
 from routers.requisitions import router as requisitions_router
 from routers.projects import router as projects_router
 from routers.users import router as users_router
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="DETI Maker Lab API", version="1.0", root_path="/api")
+
+origins = [
+    "http://localhost:8081",  # Expo (mobile/web)
+    "http://localhost:3000",  # Next.js
+    "https://deti-makerlab.ua.pt",  # produção
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth_router, tags=["auth"])
 app.include_router(equipment_router)

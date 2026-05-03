@@ -49,6 +49,7 @@
     "professors": "Profesorowie",
     "technician": "Technicy",
     "staff": "Personel",
+    "results": "{{count}} wyników",
     "noResults": "Brak wyników."
   },
   "header": {
@@ -81,7 +82,7 @@
     "processing": "Przetwarzanie..."
   },
   "statistics": {
-    "title": "Panel główny",
+    "title": "Statystyka",
     "subtitle": "Przegląd aktywności laboratorium",
     "totalProjects": "Wszystkie Projekty",
     "activeProjects": "aktywnych projektów",

@@ -49,7 +49,9 @@
     "professors": "Professors",
     "technician": "Technician",
     "staff": "Staff",
+    "results": "{{count}} results",
     "noResults": "No results found."
+    
   },
   "header": {
     "notifications": "Notifications",
@@ -81,7 +83,7 @@
     "processing": "Processing..."
   },
   "statistics": {
-    "title": "Dashboard",
+    "title": "Statistics",
     "subtitle": "Overview of lab activity and resources",
     "totalProjects": "Total Projects",
     "activeProjects": "active projects",

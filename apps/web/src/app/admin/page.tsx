@@ -1,5 +1,6 @@
 "use client";
 
+// apps/web/src/app/admin/page.tsx
 import { useState, useEffect, useCallback } from "react";
 import { Folder, Cpu, X, Check, Users, Clock, AlertTriangle } from "lucide-react";
 import {
@@ -55,11 +56,9 @@ export default function TechnicianPortal() {
       );
       setProjectMembers(memberCounts);
 
-      // Requisitions pendentes — agora uma por equipamento
       const pendingRequis = (allReqs as Requisition[]).filter((r) => r.status === "pending");
       setPendingReqs(pendingRequis);
 
-      // Carrega nomes dos assets diretamente pelo snipeit_asset_id
       const assetIds = [...new Set(
         pendingRequis
           .map((r) => r.snipeit_asset_id)
@@ -150,7 +149,6 @@ export default function TechnicianPortal() {
       ) : (
         <div className="flex flex-col gap-10">
 
-          {/* Pending Projects */}
           <section>
             <div className="flex items-center gap-3 mb-4">
               <Folder size={24} className="text-gray-600" />
@@ -216,7 +214,6 @@ export default function TechnicianPortal() {
             )}
           </section>
 
-          {/* Pending Equipment Requests — uma card por request/equipamento */}
           <section>
             <div className="flex items-center gap-3 mb-4">
               <Cpu size={24} className="text-gray-600" />
@@ -255,7 +252,6 @@ export default function TechnicianPortal() {
                           {" · "}{new Date(req.created_at).toLocaleDateString("pt-PT")}
                         </div>
 
-                        {/* Um único equipamento por request */}
                         <div className="flex items-center gap-2 text-sm">
                           <div className="p-1.5 bg-gray-50 border border-gray-100 rounded-lg">
                             <Cpu size={12} className="text-gray-400" />
@@ -292,7 +288,6 @@ export default function TechnicianPortal() {
             )}
           </section>
 
-          {/* Recently Actioned */}
           <section>
             <h2 className="text-lg font-bold mb-4">{t("admin.recentlyActioned")}</h2>
             {recentActions.length === 0 ? (
@@ -321,7 +316,6 @@ export default function TechnicianPortal() {
         </div>
       )}
 
-      {/* Confirm Modal */}
       {confirmModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-white w-full max-w-md rounded-[24px] p-8 shadow-xl">

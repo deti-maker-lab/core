@@ -63,7 +63,8 @@ export const projects = {
 
 export const equipment = {
   catalog: () => request<EquipmentCatalogItem[]>("/equipment/catalog"),
-  get: (id: number) => request<Equipment>(`/equipment/${id}`),
+  catalogAvailable: () => request<EquipmentCatalogItem[]>("/equipment/catalog/available"),
+  get: (id: number) => request<EquipmentCatalogItem>(`/equipment/${id}`),
   getProjects: (id: number) => request<{ id: number; name: string; status: string; course?: string }[]>(`/equipment/${id}/projects`),
   syncCatalog: () => request("/equipment/catalog/sync", { method: "POST" }),
 };

@@ -9,10 +9,6 @@ import { equipment as equipmentApi, type EquipmentCatalogItem } from "@/lib/api"
 import { useTranslation } from "react-i18next";
 
 const statusFilters = ["All", "Available", "Reserved", "Checked Out", "Maintenance"];
-const categories = [
-  "All Categories", "Electronics", "3d Printing", "Laser Cutting",
-  "Hand Tools", "Testing", "Computing", "Robotics", "Optics", "Safety", "Other"
-];
 
 function normalizeStatus(status?: string | null): string {
   if (!status) return "unknown";
@@ -25,8 +21,8 @@ function normalizeStatus(status?: string | null): string {
 }
 
 const statusBadge: Record<string, { bg: string; dot: string; label: string }> = {
-  available:     { bg: "bg-green-50 text-green-600",   dot: "bg-green-500",  label: "Available" },
-  reserved:      { bg: "bg-purple-50 text-purple-600", dot: "bg-purple-500", label: "Reserved" },
+  available:     { bg: "bg-green-50 text-green-600",    dot: "bg-green-500",  label: "Available" },
+  reserved:      { bg: "bg-purple-50 text-purple-600",  dot: "bg-purple-500", label: "Reserved" },
   "checked out": { bg: "bg-orange-50 text-orange-600", dot: "bg-orange-500", label: "Checked Out" },
   maintenance:   { bg: "bg-yellow-50 text-yellow-600", dot: "bg-yellow-500", label: "Maintenance" },
   unknown:       { bg: "bg-gray-100 text-gray-500",    dot: "bg-gray-400",   label: "Unknown" },
@@ -77,6 +73,11 @@ export default function EquipmentPage() {
     })();
   }, []);
 
+  const dynamicCategories = useMemo(() => {
+    const cats = new Set(equipment.map(item => item.category).filter(Boolean));
+    return ["All Categories", ...Array.from(cats).sort()];
+  }, [equipment]);
+
   const filteredEquipment = useMemo(() => {
     return equipment.filter((item) => {
       const uiStatus = normalizeStatus(item.status);
@@ -91,10 +92,10 @@ export default function EquipmentPage() {
   }, [equipment, activeStatus, activeCategory, search]);
 
   return (
-    <main className="flex-1 p-8 bg-[#f4f5f7] min-h-screen font-sans text-gray-900">
+    <main className="flex-1 p-4 sm:p-8 bg-[#f4f5f7] min-h-screen font-sans text-gray-900">
       <Header />
 
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-[32px] font-bold text-gray-900 mb-1">
           {t("equipmentPage.title")}
         </h1>
@@ -103,143 +104,142 @@ export default function EquipmentPage() {
         </p>
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4 flex-1">
-          <div className="relative w-full max-w-md">
-            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all text-sm font-medium"
-              placeholder={t("equipmentPage.searchPlaceholder")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          <div className="relative">
-            <button
-              onClick={() => setIsCatOpen(!isCatOpen)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              {activeCategory === "All Categories"
-                ? t("equipmentPage.allCategories")
-                : activeCategory}
-              <ChevronDown
-                size={16}
-                className={`transition-transform ${isCatOpen ? "rotate-180" : ""}`}
-              />
-            </button>
-
-            {isCatOpen && (
-              <div className="absolute top-full left-0 mt-2 w-56 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 py-2">
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => { setActiveCategory(cat); setIsCatOpen(false); }}
-                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                      activeCategory === cat ? "text-blue-600 font-bold" : "text-gray-600"
-                    }`}
-                  >
-                    {cat === "All Categories" ? t("equipmentPage.allCategories") : cat}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2 mb-6 w-full">
+        <div className="relative flex-1">
+          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            className="w-full pl-12 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none text-sm text-gray-600 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all shadow-sm"
+            placeholder={t("equipmentPage.searchPlaceholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
 
-        <div className="flex items-center bg-white p-1 border border-gray-200 rounded-xl">
+        <div className="relative">
+          <button
+            onClick={() => setIsCatOpen(!isCatOpen)}
+            className="flex items-center justify-between gap-2 w-full lg:w-48 px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+          >
+            <span className="truncate">
+              {activeCategory === "All Categories" ? t("equipmentPage.allCategories") : activeCategory}
+            </span>
+            <ChevronDown size={16} className={`transition-transform shrink-0 ${isCatOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {isCatOpen && (
+            <div className="absolute top-full left-0 mt-2 w-full lg:w-56 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 py-1 max-h-60 overflow-y-auto scrollbar-hide">
+              {dynamicCategories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => { setActiveCategory(cat); setIsCatOpen(false); }}
+                  className={`w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors ${
+                    activeCategory === cat ? "text-indigo-600 font-bold" : "text-gray-600"
+                  }`}
+                >
+                  {cat === "All Categories" ? t("equipmentPage.allCategories") : cat}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide lg:pb-0">
           {statusFilters.map((opt) => (
             <button
               key={opt}
               onClick={() => setActiveStatus(opt)}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
+              className={`px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap border transition-all shrink-0 ${
                 activeStatus === opt
-                  ? "bg-gray-100 text-gray-900 shadow-sm"
-                  : "text-gray-400 hover:text-gray-600"
+                  ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                  : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
               }`}
             >
-              {opt === "All"          ? t("equipmentPage.all") :
-               opt === "Available"   ? t("equipmentPage.available") :
-               opt === "Reserved"    ? t("equipmentPage.reserved") :
-               opt === "Checked Out" ? t("equipmentPage.checkedOut") :
-                                       t("equipmentPage.maintenance")}
+              {opt === "All" ? t("equipmentPage.all") : 
+               opt === "Available" ? t("equipmentPage.available", "Available") : 
+               opt === "Reserved" ? t("equipmentPage.reserved", "Reserved") : 
+               opt === "Checked Out" ? t("equipmentPage.checkedOut", "Checked Out") : 
+               t("equipmentPage.maintenance", "Maintenance")}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Equipment List */}
       <div className="space-y-3">
-        <div className="px-4 mb-2">
+        <div className="px-1 mb-3">
           <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
             {t("equipmentPage.results", { count: filteredEquipment.length })}
           </span>
         </div>
 
         {loading ? (
-          <div className="text-center py-20 text-gray-400 font-medium">
-            {t("equipmentPage.loading")}
+          <div className="flex flex-col gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="border border-transparent rounded-2xl p-5 h-24 animate-pulse bg-white" />
+            ))}
           </div>
         ) : filteredEquipment.length === 0 ? (
-          <div className="text-center py-20 text-gray-400 font-medium">
-            No equipment found.
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="bg-[#eceef1] p-4 rounded-full mb-4">
+              <Search size={32} className="text-gray-400" />
+            </div>
+            <p className="text-gray-400 font-medium">
+              {t("equipmentPage.noResults", "No equipment found.")}
+            </p>
           </div>
         ) : (
-          filteredEquipment.map((item) => {
-            const uiStatus = normalizeStatus(item.status);
-            {console.log(filteredEquipment)}
-            const badge = statusBadge[uiStatus] ?? statusBadge["unknown"];
+          <div className="flex flex-col gap-3">
+            {filteredEquipment.map((item) => {
+              const uiStatus = normalizeStatus(item.status);
+              const badge = statusBadge[uiStatus] ?? statusBadge["unknown"];
 
-            return (
-              <Link
-                key={item.id}
-                href={`/equipment/${item.id}`}
-                className="group flex items-center justify-between bg-white border border-gray-100 rounded-[20px] p-4 hover:shadow-md hover:border-gray-200 transition-all duration-200"
-              >
-                <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 bg-gray-50 flex items-center justify-center rounded-2xl border border-gray-100 overflow-hidden">
-                    {item.image ? (
-                      <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <Package size={24} className="text-gray-300" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 text-base flex items-center gap-3">
-                      {item.name}
-                      {item.category && (
-                        <span className="px-2.5 py-0.5 bg-gray-100 text-gray-500 text-[11px] font-bold rounded-full uppercase tracking-tight">
-                          {item.category}
-                        </span>
+              return (
+                <Link
+                  key={item.id}
+                  href={`/equipment/${item.id}`}
+                  className="group flex items-center justify-between bg-white border border-transparent hover:border-indigo-100 rounded-2xl p-4 transition-all shadow-sm hover:shadow-md"
+                >
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="w-14 h-14 bg-gray-50 flex items-center justify-center rounded-xl border border-gray-100 overflow-hidden shrink-0 group-hover:bg-white transition-colors">
+                      {item.image ? (
+                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Package size={24} className="text-gray-300" />
                       )}
-                    </h3>
-                    <p className="text-sm text-gray-400 mt-0.5 font-medium flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-gray-200" />
-                      {item.location ?? "Unknown location"}
-                    </p>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-bold text-gray-900 text-base truncate">
+                          {item.name}
+                        </h3>
+                        {item.category && (
+                          <span className="px-2 py-0.5 bg-gray-100 border border-gray-200 text-gray-500 text-[10px] font-bold rounded-lg uppercase">
+                            {item.category}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-400 mt-0.5 font-medium flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-200" />
+                        <span className="truncate">{item.location ?? "Unknown location"}</span>
+                      </p>
+                    </div>
                   </div>
-                </div>
 
-                <div className="flex items-center gap-8">
-                  {item.price != null && (
-                    <div className="text-sm font-bold text-gray-900">€{item.price}</div>
-                  )}
-
-                  <div className="flex items-center gap-4 min-w-[140px] justify-end">
-                    <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${badge.bg}`}>
+                  <div className="flex items-center gap-4 shrink-0">
+                    {item.price != null && (
+                      <div className="hidden sm:block text-sm font-bold text-gray-900 mr-2">€{item.price}</div>
+                    )}
+                    <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider ${badge.bg}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                      {badge.label}
+                      <span className="inline-block">{badge.label}</span>
                     </span>
-                    <ChevronRight
-                      size={18}
-                      className="text-gray-300 group-hover:text-gray-400 transition-colors"
-                    />
+                    <div className="p-2 bg-gray-50 rounded-lg group-hover:bg-indigo-50 transition-colors">
+                      <ChevronRight size={18} className="text-gray-300 group-hover:text-indigo-500 transition-colors" />
+                    </div>
                   </div>
-                </div>
-              </Link>
-            );
-          })
+                </Link>
+              );
+            })}
+          </div>
         )}
       </div>
     </main>

@@ -1,13 +1,13 @@
 "use client";
 
 // apps/web/src/app/projects/[projectId]/page.tsx
-import { useEffect, useState, useCallback} from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, Users, Cpu, Tag, Link as LinkIcon,
   Clock, CheckCircle2, XCircle, AlertCircle, ChevronRight,
-  X, Plus,
+  X, Plus, Search,
 } from "lucide-react";
 import Header from "@/app/components/header";
 import {
@@ -67,33 +67,28 @@ function MemberAvatar({ name, color = "bg-gray-200 text-gray-500" }: { name?: st
   );
 }
 
-// ── Edit Project Modal ────────────────────────────────────────────────────────
-
 function EditProjectModal({
-  project,
-  onClose,
-  onSaved,
+  project, onClose, onSaved,
 }: {
   project: ProjectDetail;
   onClose: () => void;
   onSaved: (updated: ProjectDetail) => void;
 }) {
-  const [name, setName]               = useState(project.name);
-  const [description, setDescription] = useState(project.description ?? "");
-  const [course, setCourse]           = useState(project.course ?? "");
+  const [name, setName]                 = useState(project.name);
+  const [description, setDescription]   = useState(project.description ?? "");
+  const [course, setCourse]             = useState(project.course ?? "");
   const [academicYear, setAcademicYear] = useState(project.academic_year ?? "");
-  const [groupNumber, setGroupNumber] = useState(project.group_number?.toString() ?? "");
-  const [tags, setTags]               = useState<string[]>(
+  const [groupNumber, setGroupNumber]   = useState(project.group_number?.toString() ?? "");
+  const [tags, setTags]   = useState<string[]>(
     project.tags ? project.tags.split(",").map((t) => t.trim()).filter(Boolean) : []
   );
-  const [tagInput, setTagInput]       = useState("");
-  const [links, setLinks]             = useState<string[]>(
+  const [tagInput, setTagInput] = useState("");
+  const [links, setLinks] = useState<string[]>(
     project.links ? project.links.split(",").map((l) => l.trim()).filter(Boolean) : []
   );
-  const [linkInput, setLinkInput]     = useState("");
-  const [saving, setSaving]           = useState(false);
-  const [error, setError]             = useState<string | null>(null);
-  
+  const [linkInput, setLinkInput] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState<string | null>(null);
 
   const addTag = () => {
     const t = tagInput.trim();
@@ -131,14 +126,16 @@ function EditProjectModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-xl rounded-[24px] shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-8 pt-8 pb-4 border-b border-gray-100">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white w-full sm:max-w-xl rounded-t-[24px] sm:rounded-[24px] shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-6 sm:px-8 pt-6 sm:pt-8 pb-4 border-b border-gray-100">
           <h2 className="text-xl font-bold">Edit Project</h2>
-          <button onClick={onClose}><X size={22} className="text-gray-400 hover:text-gray-700" /></button>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+            <X size={20} className="text-gray-400" />
+          </button>
         </div>
 
-        <div className="px-8 py-6 flex flex-col gap-4">
+        <div className="px-6 sm:px-8 py-6 flex flex-col gap-4">
           <div>
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">
               Project Name <span className="text-red-400">*</span>
@@ -189,7 +186,6 @@ function EditProjectModal({
             />
           </div>
 
-          {/* Tags */}
           <div>
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">Tags</label>
             <div className="flex gap-2 mb-2">
@@ -218,7 +214,6 @@ function EditProjectModal({
             )}
           </div>
 
-          {/* Links */}
           <div>
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">Links</label>
             <div className="flex gap-2 mb-2">
@@ -252,14 +247,14 @@ function EditProjectModal({
           )}
         </div>
 
-        <div className="flex justify-end gap-3 px-8 pb-8">
-          <button onClick={onClose} className="px-6 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50">
+        <div className="flex gap-3 px-6 sm:px-8 pb-6 sm:pb-8">
+          <button onClick={onClose} className="flex-1 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 text-sm">
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-6 py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-700 disabled:opacity-50"
+            className="flex-1 py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-700 disabled:opacity-50 text-sm"
           >
             {saving ? "Saving..." : "Save Changes"}
           </button>
@@ -269,49 +264,33 @@ function EditProjectModal({
   );
 }
 
-// ── Request Equipment Modal ───────────────────────────────────────────────────
-
 function RequestEquipmentModal({
-  projectId,
-  onClose,
-  onSubmitted,
+  projectId, onClose, onSubmitted,
 }: {
   projectId: number;
   onClose: () => void;
   onSubmitted: () => void;
 }) {
   const [catalog, setCatalog]       = useState<EquipmentCatalogItem[]>([]);
-  const [selectedId, setSelectedId] = useState<number | "">("");
   const [items, setItems]           = useState<EquipmentCatalogItem[]>([]);
   const [loadingCat, setLoadingCat] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState<string | null>(null);
-  const [requisitions, setRequisitions] = useState<Requisition[]>([]);
+  const [search, setSearch]         = useState("");
 
   useEffect(() => {
-    equipmentApi.catalog()
-      .then((cat) => setCatalog(cat.filter((m) => m.available)))
+    equipmentApi.catalogAvailable()
+      .then(setCatalog)
       .catch(() => setError("Failed to load equipment catalog."))
       .finally(() => setLoadingCat(false));
   }, []);
-
-  const addItem = () => {
-    if (!selectedId) return;
-    const model = catalog.find((m) => m.id === selectedId);
-    if (!model || items.find((i) => i.id === selectedId)) return;
-    setItems([...items, model]);
-    setSelectedId("");
-  };
 
   const handleSubmit = async () => {
     if (items.length === 0) { setError("Add at least one equipment item."); return; }
     setSubmitting(true);
     setError(null);
     try {
-      await requisitionsApi.create(
-        projectId,
-        items.map((i) => i.id)
-      );
+      await requisitionsApi.create(projectId, items.map((i) => i.id));
       onSubmitted();
       onClose();
     } catch (err: any) {
@@ -321,54 +300,101 @@ function RequestEquipmentModal({
     }
   };
 
+  const filteredCatalog = catalog
+    .filter((m) => !items.find((i) => i.id === m.id))
+    .filter((m) => !search || m.name.toLowerCase().includes(search.toLowerCase()));
+
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white w-full max-w-lg rounded-[24px] shadow-xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-8 pt-8 pb-4 border-b border-gray-100">
-          <h2 className="text-xl font-bold">Request Equipment</h2>
-          <button onClick={onClose}><X size={22} className="text-gray-400 hover:text-gray-700" /></button>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white w-full sm:max-w-lg rounded-t-[24px] sm:rounded-[24px] shadow-xl max-h-[90vh] flex flex-col">
+
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
+          <div>
+            <h2 className="text-lg font-bold">Request Equipment</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Only available equipment without active requests</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+            <X size={20} className="text-gray-400" />
+          </button>
         </div>
 
-        <div className="px-8 py-6 flex flex-col gap-4">
+        <div className="px-6 py-4 flex flex-col gap-4 overflow-y-auto flex-1">
           {loadingCat ? (
-            <div className="text-gray-400 text-sm animate-pulse">Loading catalog...</div>
+            <div className="text-gray-400 text-sm animate-pulse py-8 text-center">Loading catalog...</div>
+          ) : catalog.length === 0 ? (
+            <div className="text-center py-10">
+              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Cpu size={20} className="text-gray-400" />
+              </div>
+              <p className="text-sm font-semibold text-gray-600">No equipment available</p>
+              <p className="text-xs text-gray-400 mt-1">All items are in use or have pending requests.</p>
+            </div>
           ) : (
             <>
-              {items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white border border-gray-100 rounded-lg">
-                      <Cpu size={14} className="text-gray-400" />
+              {items.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Selected ({items.length})</p>
+                  {items.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-1.5 bg-white rounded-lg border border-indigo-100 shrink-0">
+                          <Cpu size={13} className="text-indigo-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-gray-800 truncate">{item.name}</div>
+                          {item.asset_tag && (
+                            <div className="text-xs text-gray-400">{item.asset_tag}{item.location ? ` · ${item.location}` : ""}</div>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setItems(items.filter((i) => i.id !== item.id))}
+                        className="p-1.5 hover:bg-red-50 rounded-lg transition-colors shrink-0 ml-2"
+                      >
+                        <X size={14} className="text-gray-400 hover:text-red-400" />
+                      </button>
                     </div>
-                    <div>
-                      <div className="text-sm font-semibold text-gray-800">{item.name}</div>
-                      {item.asset_tag && <div className="text-xs text-gray-400">[{item.asset_tag}] — {item.location ?? "no location"}</div>}
-                    </div>
-                  </div>
-                  <button onClick={() => setItems(items.filter((i) => i.id !== item.id))}>
-                    <X size={15} className="text-gray-300 hover:text-red-400 ml-1" />
-                  </button>
+                  ))}
                 </div>
-              ))}
+              )}
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                  Add Equipment
+                </p>
+                <div className="relative mb-2">
+                  <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-400 transition-colors"
+                    placeholder="Search by name..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
 
-              <div className="flex gap-2">
-                <select
-                  className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white outline-none focus:border-gray-400 transition-colors"
-                  value={selectedId}
-                  onChange={(e) => setSelectedId(e.target.value ? parseInt(e.target.value) : "")}
-                >
-                  <option value="">Select equipment...</option>
-                  {catalog
-                    .filter((m) => !items.find((i) => i.id === m.id))
-                    .map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} {m.asset_tag ? `[${m.asset_tag}]` : ""} — {m.location ?? "no location"}
-                      </option>
-                    ))}
-                </select>
-                <button onClick={addItem} className="p-3 bg-gray-900 text-white rounded-xl hover:bg-gray-700">
-                  <Plus size={18} />
-                </button>
+                <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto">
+                  {filteredCatalog.length === 0 ? (
+                    <p className="text-xs text-gray-400 text-center py-4">
+                      {search ? "No results found." : "All available equipment already selected."}
+                    </p>
+                  ) : filteredCatalog.map((m) => (
+                    <button
+                      key={m.id}
+                      onClick={() => { setItems([...items, m]); setSearch(""); }}
+                      className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-100 transition-colors text-left w-full"
+                    >
+                      <div className="p-1.5 bg-white rounded-lg border border-gray-100 shrink-0">
+                        <Cpu size={13} className="text-gray-400" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold text-gray-800 truncate">{m.name}</div>
+                        <div className="text-xs text-gray-400">
+                          {m.asset_tag ? `${m.asset_tag} · ` : ""}{m.location ?? "no location"}
+                        </div>
+                      </div>
+                      <Plus size={14} className="text-gray-400 shrink-0" />
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}
@@ -378,14 +404,19 @@ function RequestEquipmentModal({
           )}
         </div>
 
-        <div className="flex justify-end gap-3 px-8 pb-8">
-          <button onClick={onClose} className="px-6 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50">Cancel</button>
+        <div className="flex gap-3 px-6 py-4 border-t border-gray-100 shrink-0">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 text-sm"
+          >
+            Cancel
+          </button>
           <button
             onClick={handleSubmit}
             disabled={submitting || items.length === 0}
-            className="px-6 py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-700 disabled:opacity-50"
+            className="flex-1 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 text-sm transition-colors"
           >
-            {submitting ? "Submitting..." : "Submit Request"}
+            {submitting ? "Submitting..." : `Submit${items.length > 0 ? ` (${items.length})` : ""}`}
           </button>
         </div>
       </div>
@@ -393,27 +424,24 @@ function RequestEquipmentModal({
   );
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
-
 export default function ProjectDetailPage() {
-  const params = useParams<{ projectId: string }>();
+  const params    = useParams<{ projectId: string }>();
   const projectId = Number(params?.projectId);
 
-  const [project, setProject]             = useState<ProjectDetail | null>(null);
-  const [memberUsers, setMemberUsers]     = useState<Record<number, User>>({});
-  const [requisitions, setRequisitions]   = useState<Requisition[]>([]);
-  const [catalog, setCatalog]             = useState<Record<number, string>>({});
-  const [loading, setLoading]             = useState(true);
-  const [error, setError]                 = useState<string | null>(null);
+  const [project, setProject]         = useState<ProjectDetail | null>(null);
+  const [memberUsers, setMemberUsers] = useState<Record<number, User>>({});
+  const [requisitions, setRequisitions] = useState<Requisition[]>([]);
+  const [catalog, setCatalog]         = useState<Record<number, string>>({});
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showReqModal, setShowReqModal]   = useState(false);
+  const [showEditModal, setShowEditModal]       = useState(false);
+  const [showReqModal, setShowReqModal]         = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   const loadRequisitions = useCallback(async () => {
     const reqs = await requisitionsApi.listByProject(projectId).catch(() => [] as Requisition[]);
     setRequisitions(reqs);
-
     const assetIds = [...new Set(
       reqs.map((r) => r.snipeit_asset_id).filter((id): id is number => id != null)
     )];
@@ -437,10 +465,8 @@ export default function ProjectDetailPage() {
       try {
         const proj = await projectsApi.get(projectId);
         setProject(proj);
-
         const me = await auth.me().catch(() => null);
         setCurrentUserId(me?.id ?? null);
-
         const memberIds = [...new Set((proj.members ?? []).map((m) => m.user_id))];
         const userResults = await Promise.allSettled(memberIds.map((id) => usersApi.get(id)));
         const map: Record<number, User> = {};
@@ -448,9 +474,7 @@ export default function ProjectDetailPage() {
           if (r.status === "fulfilled") map[memberIds[i]] = r.value;
         });
         setMemberUsers(map);
-
-        await loadRequisitions();;
-
+        await loadRequisitions();
       } catch (e: any) {
         setError(e.message || "Error loading project");
       } finally {
@@ -459,53 +483,75 @@ export default function ProjectDetailPage() {
     })();
   }, [projectId]);
 
-  if (loading) return <main className="p-8 bg-white min-h-screen font-sans"><Header /><div className="text-gray-400 mt-8 animate-pulse">Loading project...</div></main>;
-  if (error)   return <main className="p-8 bg-white min-h-screen font-sans"><Header /><div className="mt-8 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-red-700 text-sm">Error: {error}</div></main>;
-  if (!project) return <main className="p-8 bg-white min-h-screen font-sans"><Header /><div className="mt-8 rounded-xl border border-yellow-200 bg-yellow-50 px-5 py-4 text-yellow-700 text-sm">Project not found.</div></main>;
+  if (loading) return (
+    <main className="p-6 bg-[#f4f5f7] min-h-screen font-sans">
+      <Header />
+      <div className="text-gray-400 mt-8 animate-pulse">Loading project...</div>
+    </main>
+  );
+  if (error) return (
+    <main className="p-6 bg-[#f4f5f7] min-h-screen font-sans">
+      <Header />
+      <div className="mt-8 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-red-700 text-sm">Error: {error}</div>
+    </main>
+  );
+  if (!project) return (
+    <main className="p-6 bg-[#f4f5f7] min-h-screen font-sans">
+      <Header />
+      <div className="mt-8 rounded-xl border border-yellow-200 bg-yellow-50 px-5 py-4 text-yellow-700 text-sm">Project not found.</div>
+    </main>
+  );
 
   const supervisorMembers = (project.members ?? []).filter((m) => m.role === "supervisor");
   const teamMembers       = (project.members ?? []).filter((m) => m.role !== "supervisor");
-  const tags   = project.tags  ? project.tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
-  const links  = project.links ? project.links.split(",").map((l) => l.trim()).filter(Boolean) : [];
-  const createdAt = new Date(project.created_at).toLocaleDateString("pt-PT", { year: "numeric", month: "long", day: "numeric" });
-  const isMember = currentUserId !== null && (project.members ?? []).some((m) => m.user_id === currentUserId);
+  const tags  = project.tags  ? project.tags.split(",").map((t) => t.trim()).filter(Boolean) : [];
+  const links = project.links ? project.links.split(",").map((l) => l.trim()).filter(Boolean) : [];
+  const createdAt = new Date(project.created_at).toLocaleDateString("pt-PT", {
+    year: "numeric", month: "long", day: "numeric",
+  });
+  const isMember = currentUserId !== null &&
+    (project.members ?? []).some((m) => m.user_id === currentUserId);
 
   return (
-    <main className="flex-1 bg-[#f4f5f7] p-8 min-h-screen font-sans text-gray-900">
+    <main className="flex-1 bg-[#f4f5f7] px-4 sm:px-8 py-6 min-h-screen font-sans text-gray-900">
       <Header />
 
-      <Link href="/projects" className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mb-8 text-sm font-medium">
-        <ArrowLeft size={18} /> Back
+      <Link
+        href="/projects"
+        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mb-6 text-sm font-medium bg-white"
+      >
+        <ArrowLeft size={16} /> Back
       </Link>
 
-      <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
-        <div>
-          <div className="flex items-center gap-3 flex-wrap mb-2">
-            <h1 className="text-3xl font-bold">{project.name}</h1>
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3 flex-wrap mb-1">
+            <h1 className="text-2xl sm:text-3xl font-bold truncate">{project.name}</h1>
             <StatusBadge status={project.status} />
           </div>
-          <p className="text-gray-400 max-w-2xl">{project.description || "No description."}</p>
+          <p className="text-gray-400 text-sm max-w-2xl">{project.description || "No description."}</p>
         </div>
 
         {isMember && ["pending", "active"].includes(project.status) && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 shrink-0">
             {project.status === "active" && (
               <button
                 onClick={() => setShowCompleteModal(true)}
-                className="flex items-center gap-2 px-4 py-2 border border-green-200 text-green-600 rounded-xl text-sm font-semibold hover:bg-green-50 transition-colors"
+                className="flex items-center gap-2 px-3 py-2 border border-green-200 text-green-600 rounded-xl text-sm font-semibold hover:bg-green-50 transition-colors"
               >
-                <CheckCircle2 size={16} /> Mark as Completed
+                <CheckCircle2 size={15} /> Complete
               </button>
             )}
             <button
               onClick={() => setShowReqModal(true)}
-              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors bg-white"
             >
-              <Cpu size={16} /> Request Equipment
+              <Cpu size={15} /> Request Equipment
             </button>
             <button
               onClick={() => setShowEditModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors"
             >
               Edit Project
             </button>
@@ -513,41 +559,39 @@ export default function ProjectDetailPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 flex flex-col gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 flex flex-col gap-5">
 
-          <div className="border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <h2 className="text-lg font-bold mb-4">Project Info</h2>
+          {/* Project Info */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <h2 className="text-base font-bold mb-3">Project Info</h2>
             <InfoRow label="Course"        value={project.course} />
             <InfoRow label="Academic Year" value={project.academic_year} />
             <InfoRow label="Group Number"  value={project.group_number} />
-            <InfoRow label="Created"       value={createdAt} />
-            {project.approved_at && (
-              <InfoRow label="Approved" value={new Date(project.approved_at).toLocaleDateString("pt-PT")} />
-            )}
           </div>
 
-          <div className="border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <Users size={18} className="text-gray-400" />
-              <h2 className="text-lg font-bold">Team ({(project.members ?? []).length})</h2>
+          {/* Team */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-5">
+              <Users size={17} className="text-gray-400" />
+              <h2 className="text-base font-bold">Team ({(project.members ?? []).length})</h2>
             </div>
 
             {supervisorMembers.length > 0 && (
-              <div className="mb-4">
+              <div className="mb-3">
                 <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-2">Supervisors</p>
                 {supervisorMembers.map((m) => {
                   const u = memberUsers[m.user_id];
                   return (
-                    <div key={m.user_id} className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-100 mb-2">
+                    <div key={m.user_id} className="flex items-center justify-between p-3 bg-blue-50 rounded-xl border border-blue-100 mb-2">
                       <div className="flex items-center gap-3">
                         <MemberAvatar name={u?.name} color="bg-blue-200 text-blue-700" />
                         <div>
                           <div className="font-semibold text-sm">{u?.name ?? `User #${m.user_id}`}</div>
-                          <div className="text-xs text-gray-400">{u?.email ?? "..."}</div>
+                          <div className="text-xs text-gray-400 truncate max-w-[180px]">{u?.email ?? "..."}</div>
                         </div>
                       </div>
-                      <span className="px-3 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold uppercase rounded-full">Supervisor</span>
+                      <span className="px-2.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold uppercase rounded-full shrink-0">Supervisor</span>
                     </div>
                   );
                 })}
@@ -560,15 +604,15 @@ export default function ProjectDetailPage() {
                 {teamMembers.map((m) => {
                   const u = memberUsers[m.user_id];
                   return (
-                    <div key={m.user_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mb-2">
+                    <div key={m.user_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100 mb-2">
                       <div className="flex items-center gap-3">
                         <MemberAvatar name={u?.name} />
                         <div>
                           <div className="font-semibold text-sm">{u?.name ?? `User #${m.user_id}`}</div>
-                          <div className="text-xs text-gray-400">{u?.email ?? "..."}</div>
+                          <div className="text-xs text-gray-400 truncate max-w-[180px]">{u?.email ?? "..."}</div>
                         </div>
                       </div>
-                      <span className={`px-3 py-1 text-[10px] font-bold uppercase rounded-full ${m.role === "leader" ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-500"}`}>
+                      <span className={`px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full shrink-0 ${m.role === "leader" ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-500"}`}>
                         {m.role}
                       </span>
                     </div>
@@ -577,108 +621,151 @@ export default function ProjectDetailPage() {
               </div>
             )}
 
-            {(project.members ?? []).length === 0 && <p className="text-sm text-gray-400">No members yet.</p>}
+            {(project.members ?? []).length === 0 && (
+              <p className="text-sm text-gray-400">No members yet.</p>
+            )}
           </div>
 
-          <div className="border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-6">
-              <Cpu size={18} className="text-gray-400" />
-              <h2 className="text-lg font-bold">Equipment Requests ({requisitions.length})</h2>
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <Cpu size={17} className="text-gray-400" />
+                <h2 className="text-base font-bold">Equipment ({requisitions.length})</h2>
+              </div>
+              {isMember && ["pending", "active"].includes(project.status) && (
+                <button
+                  onClick={() => setShowReqModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  <Plus size={12} /> Request
+                </button>
+              )}
             </div>
 
             {requisitions.length === 0 ? (
-              <p className="text-sm text-gray-400">No equipment requests.</p>
+              <p className="text-sm text-gray-400">No equipment requests yet.</p>
             ) : (
-              (requisitions as any[]).map((req) => {
-                const now = new Date();
-                const assetName = catalog[req.snipeit_asset_id] ?? `Asset #${req.snipeit_asset_id ?? "?"}`;
-                const requestedDate = new Date(req.created_at).toLocaleDateString("en-GB", {
-                  day: "2-digit", month: "short", year: "numeric",
-                });
+              <div className="flex flex-col gap-2">
+                {(requisitions as any[]).map((req) => {
+                  {console.log(req)}
+                  const now = new Date();
+                  const assetName = catalog[req.snipeit_asset_id] ?? `Asset #${req.snipeit_asset_id ?? "?"}`;
+                  const requestedDate = new Date(req.created_at).toLocaleDateString("en-GB", {
+                    day: "2-digit", month: "short", year: "numeric",
+                  });
 
-                // Determina label e cor do status
-                let statusLabel = req.status;
-                let statusColor = "bg-gray-100 text-gray-500 border-gray-200";
+                  let statusLabel = req.status;
+                  let statusColor = "bg-gray-100 text-gray-500";
 
-                if (req.status === "pending") {
-                  statusLabel = "Pending";
-                  statusColor = "bg-yellow-50 text-yellow-600 border-yellow-200";
-                } else if (req.status === "reserved") {
-                  statusLabel = "Reserved";
-                  statusColor = "bg-purple-50 text-purple-600 border-purple-200";
-                } else if (req.status === "returned") {
-                  statusLabel = "Returned";
-                  statusColor = "bg-green-50 text-green-600 border-green-200";
-                } else if (req.status === "rejected") {
-                  statusLabel = "Rejected";
-                  statusColor = "bg-red-50 text-red-500 border-red-200";
-                } else if (req.status === "checked_out") {
-                  if (req.expected_checkin) {
-                    const due = new Date(req.expected_checkin);
-                    const isOverdue = due < now;
-                    statusLabel = isOverdue
-                      ? "Overdue"
-                      : `Return by ${due.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`;
-                    statusColor = isOverdue
-                      ? "bg-red-50 text-red-600 border-red-200"
-                      : "bg-orange-50 text-orange-600 border-orange-200";
-                  } else {
-                    statusLabel = "Checked Out";
-                    statusColor = "bg-orange-50 text-orange-600 border-orange-200";
+                  if (req.status === "pending") {
+                    statusLabel = "Pending";
+                    statusColor = "bg-yellow-50 text-yellow-600";
+                  } else if (req.status === "reserved") {
+                    statusLabel = "Reserved";
+                    statusColor = "bg-purple-50 text-purple-600";
+                  } else if (req.status === "returned") {
+                    statusLabel = "Returned";
+                    statusColor = "bg-green-50 text-green-600";
+                  } else if (req.status === "rejected") {
+                    statusLabel = "Rejected";
+                    statusColor = "bg-red-50 text-red-500";
+                  } else if (req.status === "cancelled") {
+                    statusLabel = "Cancelled";
+                    statusColor = "bg-gray-100 text-gray-400";
+                  } else if (req.status === "checked_out") {
+                    if (req.expected_checkin) {
+                      const due = new Date(req.expected_checkin);
+                      const isOverdue = due < now;
+                      statusLabel = isOverdue
+                        ? "⚠ Overdue"
+                        : `Return by ${due.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}`;
+                      statusColor = isOverdue
+                        ? "bg-red-50 text-red-600"
+                        : "bg-orange-50 text-orange-600";
+                    } else {
+                      statusLabel = "Checked Out";
+                      statusColor = "bg-orange-50 text-orange-600";
+                    }
                   }
-                }
 
-                return (
-                  <div key={req.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100 mb-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="p-2 bg-white border border-gray-100 rounded-lg shrink-0">
-                        <Cpu size={14} className="text-gray-400" />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-semibold text-sm text-gray-800 truncate">{assetName}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">
-                          Requested {requestedDate}
+                  return (
+                    <div
+                      key={req.id}
+                      className="flex items-center justify-between gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="p-1.5 bg-white border border-gray-100 rounded-lg shrink-0">
+                          <Cpu size={13} className="text-gray-400" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-sm text-gray-800 truncate">{assetName}</div>
+                          <div className="text-xs text-gray-400">Req. {requestedDate}</div>
                         </div>
                       </div>
+                      <span className={`shrink-0 px-2.5 py-1 text-[10px] font-bold uppercase rounded-full whitespace-nowrap ${statusColor}`}>
+                        {statusLabel}
+                      </span>
                     </div>
-                    <span className={`ml-4 shrink-0 px-3 py-1 text-[10px] font-bold uppercase rounded-full border ${statusColor}`}>
-                      {statusLabel}
-                    </span>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>
-
-        <div className="flex flex-col gap-6">
+        
+        <div className="flex flex-col gap-5">
           {tags.length > 0 && (
-            <div className="border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-4"><Tag size={16} className="text-gray-400" /><h2 className="font-bold">Tags</h2></div>
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <Tag size={15} className="text-gray-400" />
+                <h2 className="font-bold text-sm">Tags</h2>
+              </div>
               <div className="flex flex-wrap gap-2">
-                {tags.map((t) => <span key={t} className="px-3 py-1.5 bg-gray-50 border border-gray-100 text-gray-600 text-xs font-medium rounded-full">{t}</span>)}
+                {tags.map((t) => (
+                  <span key={t} className="px-3 py-1.5 bg-gray-50 border border-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                    {t}
+                  </span>
+                ))}
               </div>
             </div>
           )}
 
           {links.length > 0 && (
-            <div className="border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-4"><LinkIcon size={16} className="text-gray-400" /><h2 className="font-bold">Links</h2></div>
+            <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <LinkIcon size={15} className="text-gray-400" />
+                <h2 className="font-bold text-sm">Links</h2>
+              </div>
               <div className="flex flex-col gap-2">
                 {links.map((l) => (
-                  <a key={l} href={l} target="_blank" rel="noreferrer" className="text-sm text-blue-500 hover:underline truncate flex items-center gap-1">
-                    <ChevronRight size={12} />{l.replace(/^https?:\/\//, "")}
+                  <a
+                    key={l}
+                    href={l}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm text-indigo-500 hover:text-indigo-700 hover:underline truncate flex items-center gap-1"
+                  >
+                    <ChevronRight size={12} className="shrink-0" />
+                    {l.replace(/^https?:\/\//, "")}
                   </a>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="border border-gray-200 rounded-2xl p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-4"><Clock size={16} className="text-gray-400" /><h2 className="font-bold">Timeline</h2></div>
+          <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock size={15} className="text-gray-400" />
+              <h2 className="font-bold text-sm">Timeline</h2>
+            </div>
             <div className="flex flex-col gap-3">
-              <TimelineItem icon={<CheckCircle2 size={14} />} label="Created" date={createdAt} color="text-gray-400" />
-              {project.approved_at && <TimelineItem icon={<CheckCircle2 size={14} />} label="Approved" date={new Date(project.approved_at).toLocaleDateString("pt-PT")} color="text-green-500" />}
+              <TimelineItem icon={<CheckCircle2 size={14} />} label="Created"   date={createdAt} color="text-gray-400" />
+              {project.approved_at && (
+                <TimelineItem icon={<CheckCircle2 size={14} />} label="Approved"
+                  date={new Date(project.approved_at).toLocaleDateString("pt-PT")}
+                  color="text-green-500"
+                />
+              )}
               {project.status === "rejected"  && <TimelineItem icon={<XCircle size={14} />}     label="Rejected"  color="text-red-400" />}
               {project.status === "active"    && <TimelineItem icon={<AlertCircle size={14} />}  label="Active"    color="text-green-500" />}
               {project.status === "completed" && <TimelineItem icon={<CheckCircle2 size={14} />} label="Completed" color="text-blue-500" />}
@@ -708,12 +795,14 @@ export default function ProjectDetailPage() {
           <div className="bg-white w-full max-w-md rounded-[24px] p-8 shadow-xl">
             <h2 className="text-xl font-bold mb-2">Mark as Completed?</h2>
             <p className="text-gray-500 mb-6">
-              Are you sure you want to mark <span className="font-semibold text-gray-700">{project.name}</span> as completed? This action cannot be undone.
+              Are you sure you want to mark{" "}
+              <span className="font-semibold text-gray-700">{project.name}</span> as completed?
+              This action cannot be undone.
             </p>
-            <div className="flex justify-end gap-3">
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowCompleteModal(false)}
-                className="px-6 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50"
+                className="flex-1 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 text-sm"
               >
                 Cancel
               </button>
@@ -727,7 +816,7 @@ export default function ProjectDetailPage() {
                     alert(err.message);
                   }
                 }}
-                className="px-6 py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 transition-colors"
+                className="flex-1 py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 transition-colors text-sm"
               >
                 Complete Project
               </button>

@@ -1,6 +1,6 @@
 "use client";
 
-// app/statistics/page.tsx
+// apps/web/src/app/statistics/page.tsx
 import { useEffect, useState } from "react";
 import { projects as projectsApi, equipment as equipmentApi, users as usersApi, requisitions as requisitionsApi } from "@/lib/api";
 import type { Project, EquipmentCatalogItem, User, Requisition } from "@/lib/api";
@@ -69,10 +69,10 @@ export default function StatisticsPage() {
   const technicians  = users.filter((u) => u.role === "lab_technician").length;
 
   const pendingReqs    = requisitions.filter((r) => r.status === "pending").length;
-const reservedReqs   = requisitions.filter((r) => r.status === "reserved").length;
-const checkedOutReqs = requisitions.filter((r) => r.status === "checked_out").length;
-const returnedReqs   = requisitions.filter((r) => r.status === "returned").length;
-const rejectedReqs   = requisitions.filter((r) => r.status === "rejected").length;
+  const reservedReqs   = requisitions.filter((r) => r.status === "reserved").length;
+  const checkedOutReqs = requisitions.filter((r) => r.status === "checked_out").length;
+  const returnedReqs   = requisitions.filter((r) => r.status === "returned").length;
+  const rejectedReqs   = requisitions.filter((r) => r.status === "rejected").length;
 
   const courseCounts: Record<string, number> = {};
   projects.forEach((p) => { if (p.course) courseCounts[p.course] = (courseCounts[p.course] ?? 0) + 1; });

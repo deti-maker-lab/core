@@ -1,57 +1,66 @@
-import React, { createContext, useState, useContext } from 'react';
+// apps/mobile/context/AuthContext.tsx
+import React, { createContext, useState, useContext, useEffect } from "react";
+import { auth as authApi, saveToken, removeToken, type User } from "../lib/api";
 
-const INITIAL_PROJECTS = [
-  { id: '1', title: 'Solar-Powered Weather Station', course: 'PECI', group: 'Group 7', desc: 'Building an autonomous outdoor weather station powered by solar panels.', members: 3, equip: 3, status: 'active', isMine: true, team: ['andrecastrosilva@ua.pt'] },
-  { id: '2', title: 'AI Drone Navigation', course: 'MIECT', group: 'Group 1', desc: 'Drone navigation system using AI and computer vision.', members: 2, equip: 0, status: 'pending', isMine: false, team: [] }
-];
+interface AuthContextType {
+  user: User | null;
+  role: "student" | "professor" | "lab_technician" | null;
+  isLoading: boolean;
+  setTokenAndLoad: (token: string) => Promise<void>;
+  logout: () => Promise<void>;
+}
 
-const INITIAL_INVENTORY = [
-  { id: 'e1', name: 'Raspberry Pi 4 Model B', ref: 'QR-012', category: 'Computing', price: '45€', status: 'available' },
-  { id: 'e2', name: 'Soldering Iron TS100', ref: 'QR-045', category: 'Tools', price: '65€', status: 'available' },
-  { id: 'e3', name: 'Arduino Mega 2560', ref: 'QR-088', category: 'Electronics', price: '35€', status: 'available' },
-  { id: 'e4', name: 'Fluke 87V Multimeter', ref: 'QR-102', category: 'Measurement', price: '430€', status: 'available' },
-];
-
-const INITIAL_TRANSACTIONS = [
-  { id: 't1', equipId: 'e1', name: 'Raspberry Pi 4 Model B', projectId: '2', project: 'AI Drone Navigation', student: 'Francisco Wang', status: 'checked out', date: 'Yesterday' },
-  { id: 't2', equipId: 'e2', name: 'Soldering Iron TS100', projectId: '1', project: 'Solar-Powered Weather Station', student: 'Frederico Coletta', status: 'checked out', date: '2 days ago' }
-];
-
-const INITIAL_LEDGER = [
-  { id: 'L100', equip: 'Arduino Mega 2560', student: 'João Sousa', project: 'Smart Greenhouse Monitor', action: 'Returned', date: '20 Mar 2026, 16:30' },
-];
-
-// O NOSSO NOVO SISTEMA DE NOTIFICAÇÕES GLOBAIS
-const INITIAL_NOTIFICATIONS = [
-  { id: 'n1', student: 'André Silva', title: 'Welcome to Maker Lab!', message: 'Your account is ready. Start by creating a project or requesting equipment.', read: false, date: 'Just now' }
-];
-
-const AuthContext = createContext<any>(null);
+const AuthContext = createContext<AuthContextType>({
+  user: null, role: null, isLoading: true,
+  setTokenAndLoad: async () => {},
+  logout: async () => {},
+});
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRole] = useState<'student' | 'tech' | null>(null);
-  const currentUserName = role === 'student' ? 'André Silva' : 'System Admin';
-  
-  const [projects, setProjects] = useState(INITIAL_PROJECTS);
-  const [inventory, setInventory] = useState(INITIAL_INVENTORY);
-  const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
-  const [ledger, setLedger] = useState(INITIAL_LEDGER);
-  
-  // ESTADO DAS NOTIFICAÇÕES AQUI
-  const [notifications, setNotifications] = useState(INITIAL_NOTIFICATIONS);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const login = (selectedRole: 'student' | 'tech') => setRole(selectedRole);
-  const logout = () => setRole(null);
+  // Carregar utilizador sempre que o token existir (ex.: após guardar no callback)
+  useEffect(() => {
+    console.log('[AuthContext] Calling /auth/me');
+    authApi.me()
+      .then((u) => {
+        console.log('[AuthContext] User loaded:', u.email);
+        setUser(u);
+      })
+      .catch((err) => {
+        console.log('[AuthContext] /auth/me failed:', err.message);
+        setUser(null);
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const logout = async () => {
+    await removeToken();
+    setUser(null);
+  };
+
+  // Fornece uma forma simples de guardar o token e recarregar o utilizador
+  const setTokenAndRefresh = async (token: string) => {
+    await saveToken(token);
+    // Força o recarregamento do utilizador
+    setIsLoading(true);
+    try {
+      const me = await authApi.me();
+      setUser(me);
+    } catch {
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const role = user?.role === "lab_technician" ? "lab_technician"
+    : user?.role === "professor" ? "professor"
+    : user ? "student" : null;
 
   return (
-    <AuthContext.Provider value={{ 
-      role, currentUserName, login, logout, 
-      projects, setProjects, 
-      inventory, setInventory, 
-      transactions, setTransactions,
-      ledger, setLedger,
-      notifications, setNotifications // <-- EXPORTADO AQUI
-    }}>
+    <AuthContext.Provider value={{ user, role, isLoading, setTokenAndLoad: setTokenAndRefresh, logout }}>
       {children}
     </AuthContext.Provider>
   );

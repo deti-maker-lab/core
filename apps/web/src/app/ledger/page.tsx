@@ -113,7 +113,7 @@ export default function LedgerPage() {
           placeholder="Search by equipment, user, or project..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full sm:w-[450px] pl-10 pr-4 py-2 bg-white border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+          className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 hover:border-gray-300 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 shadow-sm transition-all duration-300"
         />
       </div>
 
@@ -128,12 +128,12 @@ export default function LedgerPage() {
           {filtered.map((evt) => {
             const isCheckout = evt.type === "checkout";
             return (
-              <div key={evt.key} className="bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4 shadow-sm">
+              <div key={evt.key} className="group bg-white border border-gray-200 rounded-xl p-5 flex items-center gap-4 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-300">
                 <div className="flex flex-col items-center shrink-0 self-stretch">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center group-hover:bg-indigo-100 group-hover:scale-110 transition-all duration-300">
                     <Link2 size={18} strokeWidth={2.5} />
                   </div>
-                  <div className="w-px flex-1 bg-gray-200 mt-2 min-h-[16px]" />
+                  <div className="w-px flex-1 bg-gray-200 mt-2 min-h-[16px] group-hover:bg-indigo-100 transition-colors duration-300" />
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -144,17 +144,17 @@ export default function LedgerPage() {
                       <span className={`w-1.5 h-1.5 rounded-full ${isCheckout ? "bg-amber-500" : "bg-emerald-500"}`} />
                       {evt.type}
                     </span>
-                    <span className="text-[16px] font-bold text-gray-900 truncate">{evt.assetName}</span>
+                    <span className="text-[16px] font-bold text-gray-900 truncate group-hover:text-indigo-900 transition-colors duration-300">{evt.assetName}</span>
                   </div>
                   <div className="flex items-center text-[14px] text-gray-500">
-                    <span>{evt.userName}</span>
-                    <ArrowRight size={14} className="mx-2 text-gray-400 shrink-0" />
-                    <span>{evt.projectName}</span>
+                    <span className="group-hover:text-gray-700 transition-colors duration-300">{evt.userName}</span>
+                    <ArrowRight size={14} className="mx-2 text-gray-400 shrink-0 group-hover:text-indigo-400 group-hover:translate-x-0.5 transition-all duration-300" />
+                    <span className="group-hover:text-gray-700 transition-colors duration-300">{evt.projectName}</span>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <div className="text-[14px] text-gray-500 font-medium">
+                  <div className="text-[14px] text-gray-500 font-medium group-hover:text-gray-700 transition-colors duration-300">
                     {new Date(evt.date).toLocaleString("en-US", {
                       month: "short", day: "numeric", year: "numeric",
                       hour: "2-digit", minute: "2-digit", hour12: false,

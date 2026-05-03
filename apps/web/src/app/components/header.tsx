@@ -1,5 +1,6 @@
 "use client";
 
+// apps/web/src/app/components/header.tsx
 import { useEffect, useState, useRef } from "react";
 import { Bell, UserCircle, Check } from "lucide-react";
 import { auth, notifications as notificationsApi } from "@/lib/api";
@@ -152,15 +153,7 @@ export default function Header() {
 
           <div className="flex items-center gap-2">
             <UserCircle size={28} className="cursor-pointer hover:text-gray-600 transition-colors" />
-            <span className="text-sm font-medium text-gray-600">{user.name.split(" ")[0]}</span>
           </div>
-          
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-1 text-sm text-gray-400 hover:text-gray-700 transition-colors"
-          >
-            {t("header.logout")}
-          </button>
         </>
       ) : (
         <button onClick={() => {

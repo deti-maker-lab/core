@@ -49,6 +49,7 @@
     "professors": "Professores",
     "technician": "Técnicos",
     "staff": "Staff",
+    "results": "{{count}} resultados",
     "noResults": "Nenhum resultado encontrado."
   },
   "header": {
@@ -81,7 +82,7 @@
     "processing": "A processar..."
   },
   "statistics": {
-    "title": "Painel de Controlo",
+    "title": "Estatísticas",
     "subtitle": "Visão geral da atividade e recursos do laboratório",
     "totalProjects": "Total de Projetos",
     "activeProjects": "projetos ativos",

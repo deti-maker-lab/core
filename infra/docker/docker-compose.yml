@@ -1,4 +1,4 @@
-# infra/docker/infra/docker-compose.yml
+# infra/docker/docker-compose.yml
 
 services:
   postgres:
@@ -30,9 +30,10 @@ services:
         condition: service_healthy
     expose:
       - "8000"
+    ports:
+      - "8000:8000"
     networks:
       - backend
-    # Não expõe porta directamente — só o Nginx acede
 
   web:
     build:
@@ -43,7 +44,6 @@ services:
     container_name: makerlab-web
     networks:
       - backend
-    # Não expõe porta directamente — só o Nginx acede
 
   snipeit-db:
     image: mariadb:11.4

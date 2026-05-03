@@ -1,313 +1,167 @@
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Modal } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
+// apps/mobile/app/(tabs)/users.tsx
+import { useEffect, useState, useCallback } from "react";
+import {
+  View, Text, ScrollView, TouchableOpacity, TextInput,
+  ActivityIndicator, RefreshControl,
+} from "react-native";
+import { Search, Mail } from "lucide-react-native";
+import { users as usersApi, type User } from "../../lib/api";
 
-// Nossa Base de Dados Falsa de Utilizadores
-const INITIAL_USERS = [
-  { id: 'U001', name: 'André Silva', email: 'andrecastrosilva@ua.pt', role: 'student', status: 'active' },
-  { id: 'U002', name: 'Francisco Wang', email: 'franciscowang@ua.pt', role: 'student', status: 'active' },
-  { id: 'U003', name: 'Frederico Coletta', email: 'fredericocoletta@ua.pt', role: 'student', status: 'active' },
-  { id: 'U004', name: 'João Sousa', email: 'joaosousa@ua.pt', role: 'student', status: 'suspended' },
-  { id: 'U005', name: 'System Admin', email: 'admin@ua.pt', role: 'tech', status: 'active' },
-];
+const FILTERS = ["All", "Students", "Professors", "Technician"];
 
 export default function UsersPage() {
-  const { role, transactions } = useAuth(); 
-  
-  const [users, setUsers] = useState(INITIAL_USERS);
-  const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('All');
-  
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  
-  const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [list, setList]             = useState<User[]>([]);
+  const [loading, setLoading]       = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [search, setSearch]         = useState("");
+  const [activeFilter, setActiveFilter] = useState("All");
 
-  const filteredUsers = users.filter((user) => {
-    const matchSearch = user.name.toLowerCase().includes(search.toLowerCase()) || 
-                        user.email.toLowerCase().includes(search.toLowerCase());
-    const matchRole = roleFilter === 'All' || user.role.toLowerCase() === roleFilter.toLowerCase();
-    return matchSearch && matchRole;
+  const load = useCallback(async () => {
+    try { setList(await usersApi.list()); }
+    catch (e) { console.error(e); }
+    finally { setLoading(false); setRefreshing(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const filtered = list.filter((u) => {
+    const matchesFilter =
+      activeFilter === "All" ||
+      (activeFilter === "Students"   && u.role === "student") ||
+      (activeFilter === "Professors" && u.role === "professor") ||
+      (activeFilter === "Technician" && u.role === "lab_technician");
+    const matchesSearch =
+      !search ||
+      u.name.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase());
+    return matchesFilter && matchesSearch;
   });
 
-  const toggleUserStatus = (userId: string) => {
-    setUsers(users.map(u => {
-      if (u.id === userId && u.role !== 'tech') { 
-        return { ...u, status: u.status === 'active' ? 'suspended' : 'active' };
-      }
-      return u;
-    }));
+  const roleConfig: Record<string, { bg: string; text: string; label: string }> = {
+    student:        { bg: "#eef2ff", text: "#4f46e5", label: "Student" },
+    professor:      { bg: "#faf5ff", text: "#9333ea", label: "Professor" },
+    lab_technician: { bg: "#f0fdf4", text: "#16a34a", label: "Tech" },
   };
 
-  const handleOpenProfile = (user: any) => {
-    setSelectedUser(user);
-    setIsProfileModalOpen(true);
-  };
-
-  const getUserItemCount = (userName: string) => {
-    return transactions.filter((t: any) => t.student === userName && t.status === 'checked out').length;
-  };
+  if (loading) return (
+    <View className="flex-1 items-center justify-center bg-[#f4f5f7]">
+      <ActivityIndicator size="large" color="#4F46E5" />
+    </View>
+  );
 
   return (
-    <ScrollView className="flex-1 bg-gray-50 p-4 md:p-8">
-      
-      {/* CABEÇALHO MODERNO */}
-      <View className="mb-8 flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <View>
-          <Text className="text-4xl font-extrabold text-gray-900 mb-2 tracking-tight">User Directory</Text>
-          <Text className="text-gray-500 text-lg">Manage lab access, accounts, and equipment tracking.</Text>
+    <View className="flex-1 bg-[#f4f5f7]">
+      <ScrollView
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 24, paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor="#4f46e5" />
+        }
+      >
+        <View className="mb-5">
+          <Text className="text-[28px] font-bold text-gray-900 mb-0.5">Users</Text>
+          <Text className="text-gray-500 text-sm font-medium">{list.length} participants</Text>
         </View>
-        
-        <TouchableOpacity 
-          onPress={() => setIsAddModalOpen(true)}
-          className="flex-row items-center gap-2 px-6 py-3.5 bg-gray-900 rounded-2xl hover:bg-gray-800 transition-colors shadow-sm"
-        >
-          <Feather name="user-plus" size={20} color="white" />
-          <Text className="font-bold text-white text-base">Add User</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* BARRA DE PESQUISA E FILTROS */}
-      <View className="flex-row flex-wrap items-center gap-4 mb-8">
-        <View className="flex-1 min-w-[250px] flex-row items-center bg-white border border-gray-200 rounded-2xl px-5 py-3.5 shadow-sm">
-          <Feather name="search" size={20} color="#9CA3AF" />
-          <TextInput 
-            className="flex-1 ml-3 text-base text-gray-900" 
-            placeholder="Search by name or email..." 
+        <View className="flex-row items-center bg-white border border-gray-200 rounded-xl px-4 py-3 mb-3 gap-3 shadow-sm">
+          <Search size={16} color="#9CA3AF" />
+          <TextInput
+            placeholder="Search by name, email or NMEC..."
+            placeholderTextColor="#9CA3AF"
             value={search}
             onChangeText={setSearch}
-            placeholderTextColor="#9CA3AF"
+            className="flex-1 text-sm text-gray-700"
           />
         </View>
 
-        <View className="flex-row border border-gray-200 rounded-2xl p-1.5 bg-white shadow-sm flex-wrap">
-          {['All', 'Student', 'Tech'].map((filter) => (
-            <TouchableOpacity 
-              key={filter} 
-              onPress={() => setRoleFilter(filter)} 
-              className={`px-5 py-2.5 rounded-xl transition-all ${roleFilter === filter ? 'bg-gray-100' : ''}`}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-5" contentContainerStyle={{ gap: 8 }}>
+          {FILTERS.map((f) => (
+            <TouchableOpacity
+              key={f}
+              onPress={() => setActiveFilter(f)}
+              className="px-4 py-2 rounded-xl border"
+              style={{
+                backgroundColor: activeFilter === f ? "#4f46e5" : "#fff",
+                borderColor: activeFilter === f ? "#4f46e5" : "#e5e7eb",
+              }}
             >
-              <Text className={`${roleFilter === filter ? 'text-gray-900 font-bold' : 'text-gray-500 font-medium'}`}>{filter}</Text>
+              <Text style={{ color: activeFilter === f ? "#fff" : "#6b7280" }} className="text-sm font-bold">
+                {f}
+              </Text>
             </TouchableOpacity>
           ))}
-        </View>
-      </View>
+        </ScrollView>
 
-      {/* LISTA DE UTILIZADORES (ESTILO ALTA FIDELIDADE) */}
-      <View className="bg-white border border-gray-100 rounded-3xl shadow-sm overflow-hidden">
-        
-        {/* Cabeçalho da Tabela */}
-        <View className="hidden md:flex flex-row bg-gray-50/50 border-b border-gray-100 p-5">
-          <Text className="font-bold text-gray-400 uppercase tracking-wider text-xs w-[35%]">User Info</Text>
-          <Text className="font-bold text-gray-400 uppercase tracking-wider text-xs w-[15%]">Role</Text>
-          <Text className="font-bold text-gray-400 uppercase tracking-wider text-xs w-[15%]">Active Items</Text>
-          <Text className="font-bold text-gray-400 uppercase tracking-wider text-xs w-[15%]">Status</Text>
-          <Text className="font-bold text-gray-400 uppercase tracking-wider text-xs w-[20%] text-right">Action</Text>
-        </View>
+        {!loading && (
+          <Text className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+            {filtered.length} results
+          </Text>
+        )}
 
-        <View className="gap-0">
-          {filteredUsers.length > 0 ? filteredUsers.map((user) => {
-            const activeItemsCount = getUserItemCount(user.name);
-
-            return (
-              <TouchableOpacity 
-                key={user.id} 
-                onPress={() => handleOpenProfile(user)}
-                className="flex-col md:flex-row items-start md:items-center border-b border-gray-50 p-5 hover:bg-gray-50 transition-colors group"
-              >
-                
-                {/* Nome e Avatar */}
-                <View className="w-full md:w-[35%] flex-row items-center gap-4 mb-3 md:mb-0">
-                  <View className={`w-12 h-12 rounded-2xl items-center justify-center border shadow-sm ${
-                    user.role === 'tech' ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'
-                  }`}>
-                    <Text className={`font-bold text-lg ${user.role === 'tech' ? 'text-white' : 'text-gray-700'}`}>
-                      {user.name.charAt(0)}
-                    </Text>
-                  </View>
-                  <View>
-                    <Text className="font-bold text-gray-900 text-base mb-0.5">{user.name}</Text>
-                    <Text className="text-gray-500 text-sm font-medium">{user.email}</Text>
-                  </View>
-                </View>
-                
-                {/* Role */}
-                <View className="w-full md:w-[15%] mb-2 md:mb-0">
-                  <View className="self-start px-3 py-1.5 bg-gray-100 rounded-lg border border-gray-200">
-                    <Text className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">{user.role}</Text>
-                  </View>
-                </View>
-
-                {/* Itens */}
-                <View className="w-full md:w-[15%] flex-row items-center gap-2 mb-2 md:mb-0">
-                  <View className={`p-2 rounded-lg border ${activeItemsCount > 0 ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'}`}>
-                    <Feather name="shopping-bag" size={14} color={activeItemsCount > 0 ? '#2563EB' : '#9CA3AF'} />
-                  </View>
-                  <Text className={`font-bold ${activeItemsCount > 0 ? 'text-blue-700' : 'text-gray-400'}`}>
-                    {activeItemsCount} {activeItemsCount === 1 ? 'item' : 'items'}
-                  </Text>
-                </View>
-
-                {/* Status */}
-                <View className="w-full md:w-[15%] mb-4 md:mb-0">
-                  <View className="flex-row items-center gap-2">
-                    <View className={`w-2.5 h-2.5 rounded-full ${user.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`} />
-                    <Text className={`text-sm font-bold capitalize ${user.status === 'active' ? 'text-green-600' : 'text-red-500'}`}>
-                      {user.status}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Acões */}
-                <View className="w-full md:w-[20%] flex-row justify-start md:justify-end gap-3">
-                  <Feather name="chevron-right" size={20} color="#D1D5DB" className="hidden md:flex group-hover:text-gray-400" />
-                  
-                  {user.role !== 'tech' && (
-                    <TouchableOpacity 
-                      onPress={(e) => { e.stopPropagation(); toggleUserStatus(user.id); }}
-                      className={`px-4 py-2 rounded-xl border ${
-                        user.status === 'active' 
-                          ? 'bg-white border-gray-200 hover:border-red-200 hover:bg-red-50' 
-                          : 'bg-gray-900 border-gray-900 hover:bg-gray-800'
-                      }`}
-                    >
-                      <Text className={`font-bold text-xs uppercase tracking-wider ${
-                        user.status === 'active' ? 'text-gray-600 hover:text-red-600' : 'text-white'
-                      }`}>
-                        {user.status === 'active' ? 'Suspend' : 'Activate'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-              </TouchableOpacity>
-            );
-          }) : (
-            <View className="py-20 items-center justify-center">
-              <View className="w-20 h-20 bg-gray-50 rounded-full items-center justify-center mb-4">
-                <Feather name="users" size={32} color="#9CA3AF" />
-              </View>
-              <Text className="text-xl font-bold text-gray-900 mb-2">No users found.</Text>
-              <Text className="text-gray-500">Adjust your search or filters.</Text>
+        {filtered.length === 0 ? (
+          <View className="items-center py-20">
+            <View className="w-16 h-16 bg-white rounded-full border border-gray-100 items-center justify-center mb-4 shadow-sm">
+              <Search size={28} color="#d1d5db" />
             </View>
-          )}
-        </View>
-      </View>
-
-      {/* ========================================== */}
-      {/* MODAL DO PERFIL DO UTILIZADOR (E EQUIPAMENTO) */}
-      {/* ========================================== */}
-      <Modal visible={isProfileModalOpen} transparent animationType="fade">
-        <View className="flex-1 bg-black/60 justify-center items-center p-4">
-          <View className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl max-h-[85%]">
-            
-            {/* Cabecalho de Cor (Azul para estudantes, Cinza para Tech) */}
-            <View className={`h-24 w-full ${selectedUser?.role === 'tech' ? 'bg-gray-900' : 'bg-blue-600'}`} />
-
-            <View className="px-6 pb-6 pt-0 relative">
-              {/* Avatar Flutuante */}
-              <View className="flex-row justify-between items-end -mt-10 mb-5">
-                <View className="w-20 h-20 rounded-2xl bg-white items-center justify-center border-4 border-white shadow-sm">
-                  <Text className={`text-3xl font-black ${selectedUser?.role === 'tech' ? 'text-gray-900' : 'text-blue-600'}`}>
-                    {selectedUser?.name?.charAt(0)}
-                  </Text>
-                </View>
-                <TouchableOpacity onPress={() => setIsProfileModalOpen(false)} className="p-2 bg-gray-100 rounded-full mb-2 hover:bg-gray-200 transition-colors">
-                  <Feather name="x" size={18} color="#4B5563" />
-                </TouchableOpacity>
-              </View>
-
-              <View className="mb-6">
-                <Text className="text-2xl font-bold text-gray-900 mb-1">{selectedUser?.name}</Text>
-                <Text className="text-gray-500 font-medium mb-3">{selectedUser?.email}</Text>
-                
-                <View className="flex-row gap-2">
-                  <View className="self-start px-3 py-1 bg-gray-100 rounded-lg border border-gray-200">
-                    <Text className="text-[10px] font-bold text-gray-600 uppercase tracking-wider">{selectedUser?.role}</Text>
+            <Text className="text-gray-400 font-medium text-sm">No users found.</Text>
+          </View>
+        ) : (
+          <View className="gap-3">
+            {filtered.map((u) => {
+              const rc = roleConfig[u.role] ?? { bg: "#f3f4f6", text: "#6b7280", label: u.role };
+              return (
+                <View
+                  key={u.id}
+                  className="bg-white border border-gray-100 rounded-2xl p-4 flex-row items-start gap-3 shadow-sm"
+                >
+                  <View
+                    className="w-12 h-12 rounded-xl items-center justify-center border border-gray-100 shrink-0"
+                    style={{ backgroundColor: "#f9fafb" }}
+                  >
+                    <Text className="text-gray-500 font-bold text-lg">
+                      {u.name.charAt(0).toUpperCase()}
+                    </Text>
                   </View>
-                  <View className={`self-start px-3 py-1 rounded-lg border ${selectedUser?.status === 'active' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                    <Text className={`text-[10px] font-bold uppercase tracking-wider ${selectedUser?.status === 'active' ? 'text-green-700' : 'text-red-700'}`}>{selectedUser?.status}</Text>
-                  </View>
-                </View>
-              </View>
 
-              <View className="border-t border-gray-100 pt-6">
-                <Text className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Currently Borrowed Items</Text>
-                
-                <ScrollView className="max-h-60">
-                  <View className="gap-3 pb-2">
-                    {selectedUser && getUserItemCount(selectedUser.name) > 0 ? (
-                      transactions
-                        .filter((t: any) => t.student === selectedUser.name && t.status === 'checked out')
-                        .map((equip: any) => (
-                          <View key={equip.id} className="bg-white border border-gray-200 rounded-2xl p-4 flex-row items-center gap-4 shadow-sm">
-                            <View className="w-10 h-10 bg-blue-50 rounded-xl items-center justify-center border border-blue-100">
-                              <Feather name="cpu" size={18} color="#2563EB" />
-                            </View>
-                            <View className="flex-1">
-                              <Text className="font-bold text-gray-900 mb-1">{equip.name}</Text>
-                              <Text className="text-gray-500 text-xs font-medium">Since: {equip.date}</Text>
-                            </View>
-                          </View>
-                        ))
-                    ) : (
-                      <View className="p-6 items-center justify-center border border-dashed border-gray-200 rounded-2xl bg-gray-50">
-                        <Feather name="check-circle" size={24} color="#10B981" className="mb-3" />
-                        <Text className="text-gray-500 font-medium text-center">No equipment currently checked out. All clear!</Text>
+                  <View className="flex-1 min-w-0 gap-1">
+                    <View className="flex-row justify-between items-start gap-2">
+                      <Text className="font-bold text-gray-900 text-base flex-1" numberOfLines={1}>
+                        {u.name}
+                      </Text>
+                      <View
+                        className="px-2.5 py-0.5 rounded-lg shrink-0"
+                        style={{ backgroundColor: rc.bg }}
+                      >
+                        <Text className="text-[10px] font-black uppercase tracking-wider" style={{ color: rc.text }}>
+                          {rc.label}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View className="flex-row items-center gap-1.5">
+                      <Mail size={12} color="#d1d5db" />
+                      <Text className="text-xs text-gray-400 font-medium flex-1" numberOfLines={1}>
+                        {u.email}
+                      </Text>
+                    </View>
+
+                    {u.role === "student" && u.nmec && (
+                      <Text className="text-[11px] text-gray-400 font-bold">NMEC: {u.nmec}</Text>
+                    )}
+
+                    {u.course && (
+                      <View className="flex-row mt-0.5">
+                        <View className="bg-gray-50 border border-gray-100 px-2 py-0.5 rounded-lg">
+                          <Text className="text-[10px] font-bold text-gray-400 uppercase">{u.course}</Text>
+                        </View>
                       </View>
                     )}
                   </View>
-                </ScrollView>
-              </View>
-
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ========================================== */}
-      {/* MODAL ADICIONAR UTILIZADOR                   */}
-      {/* ========================================== */}
-      <Modal visible={isAddModalOpen} transparent animationType="fade">
-        <View className="flex-1 bg-black/60 justify-center items-center p-4">
-          <View className="bg-white w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl">
-            
-            <View className="px-6 py-5 border-b border-gray-100 flex-row justify-between items-center bg-gray-50">
-              <Text className="text-xl font-extrabold text-gray-900">Invite User</Text>
-              <TouchableOpacity onPress={() => setIsAddModalOpen(false)} className="p-2 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors">
-                <Feather name="x" size={18} color="#4B5563" />
-              </TouchableOpacity>
-            </View>
-            
-            <View className="p-6 gap-5">
-              <View>
-                <Text className="text-sm font-bold text-gray-700 mb-2">Email Address *</Text>
-                <TextInput className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-base focus:border-blue-500 focus:bg-white transition-colors" placeholder="e.g. student@ua.pt" />
-              </View>
-              <View>
-                <Text className="text-sm font-bold text-gray-700 mb-2">Role</Text>
-                <View className="flex-row gap-3">
-                  <TouchableOpacity className="flex-1 bg-gray-900 rounded-xl py-3.5 items-center shadow-sm">
-                    <Text className="text-white font-bold">Student</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity className="flex-1 bg-white border border-gray-200 rounded-xl py-3.5 items-center hover:bg-gray-50">
-                    <Text className="text-gray-600 font-bold">Tech</Text>
-                  </TouchableOpacity>
                 </View>
-              </View>
-            </View>
-
-            <View className="px-6 py-5 border-t border-gray-100 bg-gray-50">
-              <TouchableOpacity onPress={() => setIsAddModalOpen(false)} className="w-full py-3.5 bg-blue-600 rounded-xl items-center hover:bg-blue-700 transition-colors shadow-sm shadow-blue-200">
-                <Text className="font-bold text-white text-base">Send Invite Link</Text>
-              </TouchableOpacity>
-            </View>
-
+              );
+            })}
           </View>
-        </View>
-      </Modal>
-
-    </ScrollView>
+        )}
+      </ScrollView>
+    </View>
   );
 }

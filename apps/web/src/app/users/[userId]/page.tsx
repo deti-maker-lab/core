@@ -1,28 +1,48 @@
 "use client";
 
+// apps/web/src/app/users/[userId]/page.tsx
 import { useState, useEffect, use } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Folder, Cpu } from "lucide-react";
+import Header from "@/app/components/header";
 import {
   users as usersApi,
   projects as projectsApi,
+  requisitions as requisitionsApi,
   equipment as equipmentApi,
   type User,
   type Project,
-  type RequisitionDetail,
-  type EquipmentCatalogItem,
+  type Requisition,
 } from "@/lib/api";
+
+function getStatusStyles(status: string) {
+  const s = status.toLowerCase();
+  if (s === "active")    return { bg: "bg-green-50",  text: "text-green-600",  dot: "bg-green-500" };
+  if (s === "pending")   return { bg: "bg-yellow-50", text: "text-yellow-600", dot: "bg-yellow-500" };
+  if (s === "rejected")  return { bg: "bg-red-50",    text: "text-red-600",    dot: "bg-red-500" };
+  if (s === "completed") return { bg: "bg-blue-50",   text: "text-blue-600",   dot: "bg-blue-500" };
+  return { bg: "bg-gray-50", text: "text-gray-500", dot: "bg-gray-400" };
+}
+
+function getReqStatusStyles(status: string, isOverdue: boolean) {
+  if (isOverdue) return { bg: "bg-red-50", text: "text-red-600", dot: "bg-red-500" };
+  if (status === "pending") return { bg: "bg-yellow-50", text: "text-yellow-600", dot: "bg-yellow-500" };
+  if (status === "reserved") return { bg: "bg-purple-50", text: "text-purple-600", dot: "bg-purple-500" };
+  if (status === "checked_out") return { bg: "bg-orange-50", text: "text-orange-600", dot: "bg-orange-500" };
+  if (status === "returned") return { bg: "bg-green-50", text: "text-green-600", dot: "bg-green-500" };
+  if (status === "rejected") return { bg: "bg-red-50", text: "text-red-600", dot: "bg-red-500" };
+  return { bg: "bg-gray-50", text: "text-gray-500", dot: "bg-gray-400" };
+}
 
 export default function UserDetails({ params }: { params: Promise<{ userId: string }> }) {
   const { userId } = use(params);
 
-  const [user, setUser]               = useState<User | null>(null);
-  const [projects, setProjects]       = useState<Project[]>([]);
-  const [requisitions, setRequisitions] = useState<RequisitionDetail[]>([]);
-  const [equipmentNames, setEquipmentNames] = useState<Record<number, string>>({});
-  const [projectNames, setProjectNames]     = useState<Record<number, string>>({});
-  const [catalogItems, setCatalogItems]     = useState<Record<number, EquipmentCatalogItem>>({});
+  const [user, setUser]           = useState<User | null>(null);
+  const [projects, setProjects]   = useState<Project[]>([]);
+  const [reqs, setReqs]           = useState<Requisition[]>([]);
+  const [assetNames, setAssetNames]   = useState<Record<number, string>>({});
+  const [projectNames, setProjectNames] = useState<Record<number, string>>({});
   const [loading, setLoading]         = useState(true);
   const [notFoundError, setNotFoundError] = useState(false);
 
@@ -30,199 +50,217 @@ export default function UserDetails({ params }: { params: Promise<{ userId: stri
     const id = parseInt(userId);
     if (isNaN(id)) { setNotFoundError(true); return; }
 
-    async function load() {
+    (async () => {
       try {
-        const [u, p, r] = await Promise.all([
+        const [u, p] = await Promise.all([
           usersApi.get(id),
           usersApi.projects(id),
-          usersApi.requisitions(id),
         ]);
         setUser(u);
         setProjects(p);
-        setRequisitions(r);
 
-        // Nomes dos projectos
         const pNames: Record<number, string> = {};
         p.forEach((proj) => { pNames[proj.id] = proj.name; });
-        const extraPIds = [...new Set(r.map((req) => req.project_id).filter((pid) => !pNames[pid]))];
-        await Promise.allSettled(extraPIds.map(async (pid) => {
-          const proj = await projectsApi.get(pid).catch(() => null);
-          if (proj) pNames[pid] = proj.name;
-        }));
         setProjectNames(pNames);
 
-        // Catálogo completo para ir buscar expected_checkin e status
-        const cat = await equipmentApi.catalog().catch(() => []);
-        const catMap: Record<number, EquipmentCatalogItem> = {};
-        cat.forEach((m) => { catMap[m.id] = m; });
-        setCatalogItems(catMap);
+        const allReqs = await requisitionsApi.list().catch(() => [] as Requisition[]);
+        const userReqs = allReqs.filter((r) => r.requested_by === id);
+        setReqs(userReqs);
 
-        // Nomes dos assets
-        const eNames: Record<number, string> = {};
-        const allItems = r.flatMap((req) => req.items.filter((i) => i.equipment_id));
-        await Promise.allSettled(allItems.map(async (item) => {
-          // Tenta primeiro pelo catálogo (já carregado)
-          if (catMap[item.equipment_id!]) {
-            eNames[item.equipment_id!] = catMap[item.equipment_id!].name;
-          } else {
-            const asset = await equipmentApi.get(item.equipment_id!).catch(() => null);
-            if (asset) eNames[item.equipment_id!] = asset.name ?? `Asset #${item.equipment_id}`;
-          }
-        }));
-        setEquipmentNames(eNames);
+        const extraPIds = [...new Set(
+          userReqs.map((r) => r.project_id).filter((pid) => !pNames[pid])
+        )];
+        const extraPNames: Record<number, string> = { ...pNames };
+        await Promise.allSettled(
+          extraPIds.map(async (pid) => {
+            const proj = await projectsApi.get(pid).catch(() => null);
+            if (proj) extraPNames[pid] = proj.name;
+          })
+        );
+        setProjectNames(extraPNames);
+
+        const assetIds = [...new Set(
+          userReqs.map((r) => r.snipeit_asset_id).filter((x): x is number => x != null)
+        )];
+        const aNames: Record<number, string> = {};
+        await Promise.allSettled(
+          assetIds.map(async (aid) => {
+            try {
+              const a = await equipmentApi.get(aid);
+              aNames[aid] = a.name ?? `Asset #${aid}`;
+            } catch {
+              aNames[aid] = `Asset #${aid}`;
+            }
+          })
+        );
+        setAssetNames(aNames);
 
       } catch {
         setNotFoundError(true);
       } finally {
         setLoading(false);
       }
-    }
-
-    load();
+    })();
   }, [userId]);
 
-  if (loading) {
-    return (
-      <main className="flex-1 bg-white p-8 min-h-screen text-gray-800">
-        <p className="text-gray-300 mt-8 animate-pulse">Loading...</p>
-      </main>
-    );
-  }
+  if (loading) return (
+    <main className="flex-1 bg-[#f4f5f7] p-8 min-h-screen">
+      <div className="text-gray-400 animate-pulse mt-8">Loading...</div>
+    </main>
+  );
 
   if (notFoundError || !user) return notFound();
 
+  const now = new Date();
+
   return (
-    <main className="flex-1 p-8 bg-[#f4f5f7] min-h-screen font-sans text-gray-900">
+    <main className="flex-1 px-4 sm:px-8 py-6 bg-[#f4f5f7] min-h-screen font-sans text-gray-900">
+      <Header />
       <Link
         href="/users"
-        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 mb-8 text-sm font-medium"
+        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white rounded-xl hover:bg-gray-50 mb-6 text-sm font-medium shadow-sm transition-colors"
       >
-        <ArrowLeft size={18} /> Back
+        <ArrowLeft size={16} /> Back
       </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
 
-        {/* Profile Card */}
-        <div className="lg:col-span-4 flex flex-col items-center p-10 border border-gray-200 rounded-[32px] shadow-sm h-fit text-center bg-white">
-          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center text-gray-400 font-bold text-3xl mb-4">
+        <div className="lg:col-span-4 bg-white border border-gray-200 rounded-2xl p-8 shadow-sm flex flex-col items-center text-center h-fit">
+          <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 font-bold text-3xl mb-4">
             {user.name.charAt(0).toUpperCase()}
           </div>
-          <h1 className="text-2xl font-bold mb-2">{user.name}</h1>
-          <span className="px-4 py-1 bg-gray-50 border border-gray-100 text-gray-400 text-[10px] font-bold uppercase rounded-full mb-6">
-            {user.role}
+          <h1 className="text-xl font-bold mb-1">{user.name}</h1>
+          <span className={`px-3 py-1 text-[10px] font-bold uppercase rounded-full border mb-5 ${
+            user.role === "lab_technician" ? "bg-teal-50 text-teal-600 border-teal-200" :
+            user.role === "professor"      ? "bg-purple-50 text-purple-600 border-purple-200" :
+            "bg-indigo-50 text-indigo-600 border-indigo-200"
+          }`}>
+            {user.role === "lab_technician" ? "Lab Technician" : user.role}
           </span>
-          <p className="text-gray-400 text-sm mb-1">{user.email}</p>
-          <p className="text-gray-300 text-sm font-medium">{user.nmec ?? "—"}</p>
-          {user.course && (
-            <p className="text-gray-300 text-sm font-medium mt-1">{user.course}</p>
-          )}
-          {user.academic_year && (
-            <p className="text-gray-300 text-sm font-medium">{user.academic_year}º ano</p>
-          )}
+
+          <div className="w-full text-left flex flex-col gap-2">
+            <div className="flex justify-between text-sm py-2 border-b border-gray-50">
+              <span className="text-gray-400 font-medium">Email</span>
+              <span className="text-gray-700 font-semibold text-right truncate max-w-[60%]">{user.email}</span>
+            </div>
+            {user.nmec && (
+              <div className="flex justify-between text-sm py-2 border-b border-gray-50">
+                <span className="text-gray-400 font-medium">NMEC</span>
+                <span className="text-gray-700 font-semibold">{user.nmec}</span>
+              </div>
+            )}
+            {user.course && (
+              <div className="flex justify-between text-sm py-2 border-b border-gray-50">
+                <span className="text-gray-400 font-medium">Course</span>
+                <span className="text-gray-700 font-semibold text-right">{user.course}</span>
+              </div>
+            )}
+            {user.academic_year && (
+              <div className="flex justify-between text-sm py-2">
+                <span className="text-gray-400 font-medium">Year</span>
+                <span className="text-gray-700 font-semibold">{user.academic_year}º ano</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Content */}
-        <div className="lg:col-span-8 flex flex-col gap-6">
+        <div className="lg:col-span-8 flex flex-col gap-5">
 
-          {/* Projects */}
-          <section className="border border-gray-200 rounded-[32px] p-8 shadow-sm bg-white">
-            <div className="flex items-center gap-2 mb-6 font-bold text-lg">
-              <Folder size={20} className="text-gray-400" /> Projects ({projects.length})
+          <section className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Folder size={18} className="text-gray-400" />
+              <h2 className="font-bold text-gray-900">Projects ({projects.length})</h2>
             </div>
-            {projects.length > 0 ? (
-              <div className="space-y-3">
-                {projects.map((proj) => (
-                  <Link key={proj.id} href={`/projects/${proj.id}`}>
-                    <div className="flex items-center justify-between p-5 bg-gray-50 rounded-[20px] hover:bg-gray-100 transition-colors cursor-pointer">
-                      <div>
-                        <div className="font-bold text-gray-800">{proj.name}</div>
-                        <div className="text-xs text-gray-400">{proj.course ?? "—"}</div>
-                      </div>
-                      <span className={`px-4 py-1.5 text-[10px] font-bold uppercase rounded-full border ${
-                        proj.status === "active"    ? "bg-green-50 border-green-100 text-green-600" :
-                        proj.status === "completed" ? "bg-blue-50 border-blue-100 text-blue-600" :
-                        proj.status === "rejected"  ? "bg-red-50 border-red-100 text-red-500" :
-                        "bg-white border-gray-200 text-gray-500 shadow-sm"
-                      }`}>
-                        {proj.status}
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+            {projects.length === 0 ? (
+              <p className="text-gray-400 text-sm">No projects.</p>
             ) : (
-              <p className="text-gray-400 text-sm">No active projects.</p>
+              <div className="flex flex-col gap-2">
+                {projects.map((proj) => {
+                  const pStyles = getStatusStyles(proj.status);
+                  return (
+                    <Link key={proj.id} href={`/projects/${proj.id}`}>
+                      <div className="flex items-center justify-between p-3.5 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors cursor-pointer">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm text-gray-800 truncate">{proj.name}</span>
+                          </div>
+                          <div className="text-xs text-gray-400 mt-0.5">
+                            {proj.course}
+                          </div>
+                        </div>
+                        <span className={`shrink-0 ml-3 flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black uppercase rounded-full ${pStyles.bg} ${pStyles.text}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${pStyles.dot}`} />
+                          {proj.status}
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
             )}
           </section>
 
-          {/* Requisitions */}
-          <section className="border border-gray-200 rounded-[32px] p-8 shadow-sm bg-white">
-            <div className="flex items-center gap-2 mb-6 font-bold text-lg">
-              <Cpu size={20} className="text-gray-400" /> Equipment Requests ({requisitions.length})
+          <section className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-4">
+              <Cpu size={18} className="text-gray-400" />
+              <h2 className="font-bold text-gray-900">Equipment Requests ({reqs.length})</h2>
             </div>
-            {requisitions.length > 0 ? (
-              <div className="space-y-4">
-                {requisitions.map((req) => (
-                  <div key={req.id} className="py-3 border-b border-gray-50 last:border-0">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-gray-50 rounded-xl text-gray-400 border border-gray-100">
-                          <Cpu size={18} />
+            {reqs.length === 0 ? (
+              <p className="text-gray-400 text-sm">No equipment requests.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {reqs.map((req) => {
+                  const assetName = req.snipeit_asset_id
+                    ? (assetNames[req.snipeit_asset_id] ?? `Asset #${req.snipeit_asset_id}`)
+                    : "Unknown asset";
+                  const projectName = projectNames[req.project_id] ?? `Project #${req.project_id}`;
+                  const reqDate = new Date(req.created_at).toLocaleDateString("en-GB", {
+                    day: "2-digit", month: "short", year: "numeric",
+                  });
+
+                  let statusLabel = req.status;
+                  let isOverdue = false;
+
+                  if (req.status === "pending") { statusLabel = "Pending"; }
+                  else if (req.status === "reserved") { statusLabel = "Reserved"; }
+                  else if (req.status === "returned") { statusLabel = "Returned"; }
+                  else if (req.status === "rejected") { statusLabel = "Rejected"; }
+                  else if (req.status === "checked_out") {
+                    statusLabel = "Checked Out";
+                    if (req.expected_checkin) {
+                      const due = new Date(req.expected_checkin);
+                      isOverdue = due < now;
+                      statusLabel = isOverdue
+                        ? "Overdue"
+                        : `Return by ${due.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`;
+                    }
+                  }
+
+                  const rStyles = getReqStatusStyles(req.status, isOverdue);
+
+                  return (
+                    <div key={req.id} className="bg-gray-50 border border-gray-100 rounded-xl p-4 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="p-2 bg-white border border-gray-100 rounded-lg shrink-0">
+                          <Cpu size={14} className="text-gray-400" />
                         </div>
-                        <div>
-                          <div className="text-sm font-bold text-gray-800">
-                            {projectNames[req.project_id] ?? `Project #${req.project_id}`}
-                          </div>
-                          <div className="text-xs text-gray-400 font-medium">
-                            {new Date(req.created_at).toLocaleDateString("pt-PT")}
-                          </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-sm text-gray-900 truncate">{assetName}</div>
+                          <div className="text-xs text-gray-400 truncate mt-0.5">{projectName}</div>
                         </div>
                       </div>
-                      <span className={`px-4 py-1.5 text-[10px] font-bold uppercase rounded-xl border ${
-                        req.status === "reserved"   ? "bg-purple-50 border-purple-100 text-purple-500" :
-                        req.status === "rejected"   ? "bg-red-50 border-red-100 text-red-400" :
-                        req.status === "fulfilled"  ? "bg-green-50 border-green-100 text-green-500" :
-                        req.status === "checked_out"? "bg-orange-50 border-orange-100 text-orange-500" :
-                        "bg-white border-gray-200 text-gray-500 shadow-sm"
-                      }`}>
-                        {req.status}
-                      </span>
-                    </div>
 
-                    {/* Items com return by date */}
-                    <div className="ml-12 flex flex-col gap-1.5">
-                      {req.items.map((item) => {
-                        const assetInfo = item.equipment_id ? catalogItems[item.equipment_id] : null;
-                        const isCheckedOut = assetInfo && !assetInfo.available &&
-                          assetInfo.status?.toLowerCase() !== "reserved";
-                        const expectedCheckin = assetInfo?.expected_checkin;
-
-                        return (
-                          <div key={item.id} className="flex items-center gap-2 flex-wrap">
-                            <div className="flex items-center gap-1.5">
-                              <Cpu size={12} className="text-gray-300" />
-                              <span className="text-xs text-gray-600 font-medium">
-                                {item.equipment_id
-                                  ? (equipmentNames[item.equipment_id] ?? `Asset #${item.equipment_id}`)
-                                  : `Equipment #${item.equipment_id}`}
-                              </span>
-                            </div>
-                            {isCheckedOut && expectedCheckin && (
-                              <span className="px-2 py-0.5 bg-orange-50 text-orange-500 rounded-full text-[10px] font-semibold border border-orange-100">
-                                Return by {new Date(expectedCheckin).toLocaleDateString("pt-PT", {
-                                  day: "numeric", month: "short", year: "numeric"
-                                })}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
+                      <div className="flex items-end gap-1.5 shrink-0">
+                        <span className="text-xs text-gray-400">{reqDate}</span>
+                        <span className={`flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black uppercase rounded-full whitespace-nowrap ${rStyles.bg} ${rStyles.text}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${rStyles.dot}`} />
+                          {statusLabel}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-            ) : (
-              <p className="text-gray-400 text-sm">No equipment requested.</p>
             )}
           </section>
 
