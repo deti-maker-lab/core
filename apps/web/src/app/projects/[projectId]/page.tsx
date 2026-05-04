@@ -18,6 +18,7 @@ import {
   auth,
 } from "@/lib/api";
 import type { ProjectDetail, User, Requisition, EquipmentCatalogItem } from "@/lib/api";
+import { useTranslation } from "react-i18next";
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
@@ -74,6 +75,7 @@ function EditProjectModal({
   onClose: () => void;
   onSaved: (updated: ProjectDetail) => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName]                 = useState(project.name);
   const [description, setDescription]   = useState(project.description ?? "");
   const [course, setCourse]             = useState(project.course ?? "");
@@ -129,7 +131,7 @@ function EditProjectModal({
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
       <div className="bg-white w-full sm:max-w-xl rounded-t-[24px] sm:rounded-[24px] shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-6 sm:px-8 pt-6 sm:pt-8 pb-4 border-b border-gray-100">
-          <h2 className="text-xl font-bold">Edit Project</h2>
+          <h2 className="text-xl font-bold">{t("projectsPage.details.edit.title")}</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
             <X size={20} className="text-gray-400" />
           </button>
@@ -138,7 +140,7 @@ function EditProjectModal({
         <div className="px-6 sm:px-8 py-6 flex flex-col gap-4">
           <div>
             <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">
-              Project Name <span className="text-red-400">*</span>
+              {t("projectsPage.new.projectName")} <span className="text-red-400">*</span>
             </label>
             <input
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors"
@@ -148,7 +150,7 @@ function EditProjectModal({
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">Description</label>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">{t("projectsPage.new.description")}</label>
             <textarea
               rows={3}
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors resize-none"
@@ -159,7 +161,7 @@ function EditProjectModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">Course</label>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">{t("projectsPage.new.course")}</label>
               <input
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors"
                 value={course}
@@ -167,7 +169,7 @@ function EditProjectModal({
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">Academic Year</label>
+              <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">{t("projectsPage.new.academicYear")}</label>
               <input
                 className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors"
                 value={academicYear}
@@ -177,7 +179,7 @@ function EditProjectModal({
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">Group Number</label>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">{t("projectsPage.new.groupNumber")}</label>
             <input
               type="number"
               className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-gray-400 transition-colors"
@@ -187,7 +189,7 @@ function EditProjectModal({
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">Tags</label>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">{t("projectsPage.new.tags")}</label>
             <div className="flex gap-2 mb-2">
               <input
                 className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gray-400 transition-colors"
@@ -215,7 +217,7 @@ function EditProjectModal({
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">Links</label>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1 block">{t("projectsPage.new.links")}</label>
             <div className="flex gap-2 mb-2">
               <input
                 className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-gray-400 transition-colors"
@@ -249,14 +251,14 @@ function EditProjectModal({
 
         <div className="flex gap-3 px-6 sm:px-8 pb-6 sm:pb-8">
           <button onClick={onClose} className="flex-1 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 text-sm">
-            Cancel
+            {t("projectsPage.new.cancel")}
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
             className="flex-1 py-3 bg-gray-900 text-white font-semibold rounded-xl hover:bg-gray-700 disabled:opacity-50 text-sm"
           >
-            {saving ? "Saving..." : "Save Changes"}
+            {saving ? t("projectsPage.details.edit.saving") : t("projectsPage.details.edit.saveChanges")}
           </button>
         </div>
       </div>
@@ -271,6 +273,7 @@ function RequestEquipmentModal({
   onClose: () => void;
   onSubmitted: () => void;
 }) {
+  const { t } = useTranslation();
   const [catalog, setCatalog]       = useState<EquipmentCatalogItem[]>([]);
   const [items, setItems]           = useState<EquipmentCatalogItem[]>([]);
   const [loadingCat, setLoadingCat] = useState(true);
@@ -310,8 +313,8 @@ function RequestEquipmentModal({
 
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 shrink-0">
           <div>
-            <h2 className="text-lg font-bold">Request Equipment</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Only available equipment without active requests</p>
+            <h2 className="text-lg font-bold">{t("projectsPage.details.requestModal.title")}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">{t("projectsPage.details.requestModal.subtitle")}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
             <X size={20} className="text-gray-400" />
@@ -320,20 +323,20 @@ function RequestEquipmentModal({
 
         <div className="px-6 py-4 flex flex-col gap-4 overflow-y-auto flex-1">
           {loadingCat ? (
-            <div className="text-gray-400 text-sm animate-pulse py-8 text-center">Loading catalog...</div>
+            <div className="text-gray-400 text-sm animate-pulse py-8 text-center">{t("projectsPage.details.requestModal.loading")}</div>
           ) : catalog.length === 0 ? (
             <div className="text-center py-10">
               <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                 <Cpu size={20} className="text-gray-400" />
               </div>
-              <p className="text-sm font-semibold text-gray-600">No equipment available</p>
-              <p className="text-xs text-gray-400 mt-1">All items are in use or have pending requests.</p>
+              <p className="text-sm font-semibold text-gray-600">{t("projectsPage.details.requestModal.noEquipment")}</p>
+              <p className="text-xs text-gray-400 mt-1">{t("projectsPage.details.requestModal.noEquipmentSubtitle")}</p>
             </div>
           ) : (
             <>
               {items.length > 0 && (
                 <div className="flex flex-col gap-2">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Selected ({items.length})</p>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{t("projectsPage.new.selected", { count: items.length })}</p>
                   {items.map((item) => (
                     <div key={item.id} className="flex items-center justify-between p-3 bg-indigo-50 rounded-xl border border-indigo-100">
                       <div className="flex items-center gap-3 min-w-0">
@@ -359,13 +362,13 @@ function RequestEquipmentModal({
               )}
               <div>
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
-                  Add Equipment
+                  {t("projectsPage.new.addEquipment")}
                 </p>
                 <div className="relative mb-2">
                   <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-400 transition-colors"
-                    placeholder="Search by name..."
+                    placeholder={t("projectsPage.new.searchEquipmentPlaceholder")}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
@@ -388,7 +391,7 @@ function RequestEquipmentModal({
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-semibold text-gray-800 truncate">{m.name}</div>
                         <div className="text-xs text-gray-400">
-                          {m.asset_tag ? `${m.asset_tag} · ` : ""}{m.location ?? "no location"}
+                          {m.asset_tag ? `${m.asset_tag} · ` : ""}{m.location ?? t("projectsPage.new.noLocation")}
                         </div>
                       </div>
                       <Plus size={14} className="text-gray-400 shrink-0" />
@@ -409,14 +412,14 @@ function RequestEquipmentModal({
             onClick={onClose}
             className="flex-1 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 text-sm"
           >
-            Cancel
+            {t("projectsPage.new.cancel")}
           </button>
           <button
             onClick={handleSubmit}
             disabled={submitting || items.length === 0}
             className="flex-1 py-3 bg-indigo-600 text-white font-semibold rounded-xl hover:bg-indigo-700 disabled:opacity-50 text-sm transition-colors"
           >
-            {submitting ? "Submitting..." : `Submit${items.length > 0 ? ` (${items.length})` : ""}`}
+            {submitting ? t("projectsPage.new.submitting") : `${t("projectsPage.details.requestModal.submit")}${items.length > 0 ? ` (${items.length})` : ""}`}
           </button>
         </div>
       </div>
@@ -425,6 +428,7 @@ function RequestEquipmentModal({
 }
 
 export default function ProjectDetailPage() {
+  const { t } = useTranslation();
   const params    = useParams<{ projectId: string }>();
   const projectId = Number(params?.projectId);
 
@@ -486,19 +490,19 @@ export default function ProjectDetailPage() {
   if (loading) return (
     <main className="p-6 bg-[#f4f5f7] min-h-screen font-sans">
       <Header />
-      <div className="text-gray-400 mt-8 animate-pulse">Loading project...</div>
+      <div className="text-gray-400 mt-8 animate-pulse">{t("projectsPage.details.loading")}</div>
     </main>
   );
   if (error) return (
     <main className="p-6 bg-[#f4f5f7] min-h-screen font-sans">
       <Header />
-      <div className="mt-8 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-red-700 text-sm">Error: {error}</div>
+      <div className="mt-8 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-red-700 text-sm">{t("projectsPage.details.error")}{error}</div>
     </main>
   );
   if (!project) return (
     <main className="p-6 bg-[#f4f5f7] min-h-screen font-sans">
       <Header />
-      <div className="mt-8 rounded-xl border border-yellow-200 bg-yellow-50 px-5 py-4 text-yellow-700 text-sm">Project not found.</div>
+      <div className="mt-8 rounded-xl border border-yellow-200 bg-yellow-50 px-5 py-4 text-yellow-700 text-sm">{t("projectsPage.details.notFound")}</div>
     </main>
   );
 
@@ -520,7 +524,7 @@ export default function ProjectDetailPage() {
         href="/projects"
         className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mb-6 text-sm font-medium bg-white"
       >
-        <ArrowLeft size={16} /> Back
+        <ArrowLeft size={16} /> {t("projectsPage.new.back")}
       </Link>
 
       {/* Header */}
@@ -530,7 +534,7 @@ export default function ProjectDetailPage() {
             <h1 className="text-2xl sm:text-3xl font-bold truncate">{project.name}</h1>
             <StatusBadge status={project.status} />
           </div>
-          <p className="text-gray-400 text-sm max-w-2xl">{project.description || "No description."}</p>
+          <p className="text-gray-400 text-sm max-w-2xl">{project.description || t("projectsPage.details.noDescription")}</p>
         </div>
 
         {isMember && ["pending", "active"].includes(project.status) && (
@@ -540,20 +544,20 @@ export default function ProjectDetailPage() {
                 onClick={() => setShowCompleteModal(true)}
                 className="flex items-center gap-2 px-3 py-2 border border-green-200 text-green-600 rounded-xl text-sm font-semibold hover:bg-green-50 transition-colors"
               >
-                <CheckCircle2 size={15} /> Complete
+                <CheckCircle2 size={15} /> {t("projectsPage.details.complete")}
               </button>
             )}
             <button
               onClick={() => setShowReqModal(true)}
               className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors bg-white"
             >
-              <Cpu size={15} /> Request Equipment
+              <Cpu size={15} /> {t("projectsPage.details.requestEquipment")}
             </button>
             <button
               onClick={() => setShowEditModal(true)}
               className="flex items-center gap-2 px-3 py-2 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors"
             >
-              Edit Project
+              {t("projectsPage.details.editProject")}
             </button>
           </div>
         )}
@@ -564,22 +568,22 @@ export default function ProjectDetailPage() {
 
           {/* Project Info */}
           <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
-            <h2 className="text-base font-bold mb-3">Project Info</h2>
-            <InfoRow label="Course"        value={project.course} />
-            <InfoRow label="Academic Year" value={project.academic_year} />
-            <InfoRow label="Group Number"  value={project.group_number} />
+            <h2 className="text-base font-bold mb-3">{t("projectsPage.details.projectInfo")}</h2>
+            <InfoRow label={t("projectsPage.new.course")}        value={project.course} />
+            <InfoRow label={t("projectsPage.new.academicYear")} value={project.academic_year} />
+            <InfoRow label={t("projectsPage.new.groupNumber")}  value={project.group_number} />
           </div>
 
           {/* Team */}
           <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-5">
               <Users size={17} className="text-gray-400" />
-              <h2 className="text-base font-bold">Team ({(project.members ?? []).length})</h2>
+              <h2 className="text-base font-bold">{t("projectsPage.details.team", { count: (project.members ?? []).length })}</h2>
             </div>
 
             {supervisorMembers.length > 0 && (
               <div className="mb-3">
-                <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-2">Supervisors</p>
+                <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-2">{t("projectsPage.details.supervisors")}</p>
                 {supervisorMembers.map((m) => {
                   const u = memberUsers[m.user_id];
                   return (
@@ -600,7 +604,7 @@ export default function ProjectDetailPage() {
 
             {teamMembers.length > 0 && (
               <div>
-                <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-2">Members</p>
+                <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-2">{t("projectsPage.details.members")}</p>
                 {teamMembers.map((m) => {
                   const u = memberUsers[m.user_id];
                   return (
@@ -613,7 +617,7 @@ export default function ProjectDetailPage() {
                         </div>
                       </div>
                       <span className={`px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full shrink-0 ${m.role === "leader" ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-500"}`}>
-                        {m.role}
+                        {m.role === "leader" ? t("projectsPage.new.leader") : m.role}
                       </span>
                     </div>
                   );
@@ -622,7 +626,7 @@ export default function ProjectDetailPage() {
             )}
 
             {(project.members ?? []).length === 0 && (
-              <p className="text-sm text-gray-400">No members yet.</p>
+              <p className="text-sm text-gray-400">{t("projectsPage.details.noMembers")}</p>
             )}
           </div>
 
@@ -630,20 +634,20 @@ export default function ProjectDetailPage() {
             <div className="flex items-center justify-between mb-5">
               <div className="flex items-center gap-2">
                 <Cpu size={17} className="text-gray-400" />
-                <h2 className="text-base font-bold">Equipment ({requisitions.length})</h2>
+                <h2 className="text-base font-bold">{t("projectsPage.details.equipment", { count: requisitions.length })}</h2>
               </div>
               {isMember && ["pending", "active"].includes(project.status) && (
                 <button
                   onClick={() => setShowReqModal(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-xl text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
                 >
-                  <Plus size={12} /> Request
+                  <Plus size={12} /> {t("projectsPage.details.request")}
                 </button>
               )}
             </div>
 
             {requisitions.length === 0 ? (
-              <p className="text-sm text-gray-400">No equipment requests yet.</p>
+              <p className="text-sm text-gray-400">{t("projectsPage.details.noEquipment")}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {(requisitions as any[]).map((req) => {
@@ -699,7 +703,7 @@ export default function ProjectDetailPage() {
                         </div>
                         <div className="min-w-0">
                           <div className="font-semibold text-sm text-gray-800 truncate">{assetName}</div>
-                          <div className="text-xs text-gray-400">Req. {requestedDate}</div>
+                          <div className="text-xs text-gray-400">{t("projectsPage.details.reqDate", { date: requestedDate })}</div>
                         </div>
                       </div>
                       <span className={`shrink-0 px-2.5 py-1 text-[10px] font-bold uppercase rounded-full whitespace-nowrap ${statusColor}`}>
@@ -718,7 +722,7 @@ export default function ProjectDetailPage() {
             <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <Tag size={15} className="text-gray-400" />
-                <h2 className="font-bold text-sm">Tags</h2>
+                <h2 className="font-bold text-sm">{t("projectsPage.new.tags")}</h2>
               </div>
               <div className="flex flex-wrap gap-2">
                 {tags.map((t) => (
@@ -734,7 +738,7 @@ export default function ProjectDetailPage() {
             <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
               <div className="flex items-center gap-2 mb-3">
                 <LinkIcon size={15} className="text-gray-400" />
-                <h2 className="font-bold text-sm">Links</h2>
+                <h2 className="font-bold text-sm">{t("projectsPage.new.links")}</h2>
               </div>
               <div className="flex flex-col gap-2">
                 {links.map((l) => (
@@ -756,12 +760,12 @@ export default function ProjectDetailPage() {
           <div className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <Clock size={15} className="text-gray-400" />
-              <h2 className="font-bold text-sm">Timeline</h2>
+              <h2 className="font-bold text-sm">{t("projectsPage.details.timeline")}</h2>
             </div>
             <div className="flex flex-col gap-3">
-              <TimelineItem icon={<CheckCircle2 size={14} />} label="Created"   date={createdAt} color="text-gray-400" />
+              <TimelineItem icon={<CheckCircle2 size={14} />} label={t("projectsPage.details.created")}   date={createdAt} color="text-gray-400" />
               {project.approved_at && (
-                <TimelineItem icon={<CheckCircle2 size={14} />} label="Approved"
+                <TimelineItem icon={<CheckCircle2 size={14} />} label={t("projectsPage.details.approved")}
                   date={new Date(project.approved_at).toLocaleDateString("pt-PT")}
                   color="text-green-500"
                 />
@@ -793,18 +797,16 @@ export default function ProjectDetailPage() {
       {showCompleteModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-md rounded-[24px] p-8 shadow-xl">
-            <h2 className="text-xl font-bold mb-2">Mark as Completed?</h2>
+            <h2 className="text-xl font-bold mb-2">{t("projectsPage.details.markAsCompleted")}</h2>
             <p className="text-gray-500 mb-6">
-              Are you sure you want to mark{" "}
-              <span className="font-semibold text-gray-700">{project.name}</span> as completed?
-              This action cannot be undone.
+              {t("projectsPage.details.markAsCompletedConfirm", { name: project.name })}
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowCompleteModal(false)}
                 className="flex-1 py-3 border border-gray-200 text-gray-600 font-semibold rounded-xl hover:bg-gray-50 text-sm"
               >
-                Cancel
+                {t("projectsPage.new.cancel")}
               </button>
               <button
                 onClick={async () => {
@@ -818,7 +820,7 @@ export default function ProjectDetailPage() {
                 }}
                 className="flex-1 py-3 bg-green-500 text-white font-semibold rounded-xl hover:bg-green-600 transition-colors text-sm"
               >
-                Complete Project
+                {t("projectsPage.details.completeProject")}
               </button>
             </div>
           </div>

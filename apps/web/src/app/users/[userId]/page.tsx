@@ -15,6 +15,7 @@ import {
   type Project,
   type Requisition,
 } from "@/lib/api";
+import { useTranslation } from "react-i18next";
 
 function getStatusStyles(status: string) {
   const s = status.toLowerCase();
@@ -36,6 +37,7 @@ function getReqStatusStyles(status: string, isOverdue: boolean) {
 }
 
 export default function UserDetails({ params }: { params: Promise<{ userId: string }> }) {
+  const { t } = useTranslation();
   const { userId } = use(params);
 
   const [user, setUser]           = useState<User | null>(null);
@@ -105,7 +107,7 @@ export default function UserDetails({ params }: { params: Promise<{ userId: stri
 
   if (loading) return (
     <main className="flex-1 bg-[#f4f5f7] p-8 min-h-screen">
-      <div className="text-gray-400 animate-pulse mt-8">Loading...</div>
+      <div className="text-gray-400 animate-pulse mt-8">{t("common.loading")}</div>
     </main>
   );
 
@@ -120,7 +122,7 @@ export default function UserDetails({ params }: { params: Promise<{ userId: stri
         href="/users"
         className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 bg-white rounded-xl hover:bg-gray-50 mb-6 text-sm font-medium shadow-sm transition-colors"
       >
-        <ArrowLeft size={16} /> Back
+        <ArrowLeft size={16} /> {t("usersPage.back")}
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -135,30 +137,31 @@ export default function UserDetails({ params }: { params: Promise<{ userId: stri
             user.role === "professor"      ? "bg-purple-50 text-purple-600 border-purple-200" :
             "bg-indigo-50 text-indigo-600 border-indigo-200"
           }`}>
-            {user.role === "lab_technician" ? "Lab Technician" : user.role}
+            {user.role === "lab_technician" ? t("usersPage.labTechnician") : 
+             user.role === "student" ? t("usersPage.students") : t("usersPage.professors")}
           </span>
 
           <div className="w-full text-left flex flex-col gap-2">
             <div className="flex justify-between text-sm py-2 border-b border-gray-50">
-              <span className="text-gray-400 font-medium">Email</span>
+              <span className="text-gray-400 font-medium">{t("usersPage.email")}</span>
               <span className="text-gray-700 font-semibold text-right truncate max-w-[60%]">{user.email}</span>
             </div>
             {user.nmec && (
               <div className="flex justify-between text-sm py-2 border-b border-gray-50">
-                <span className="text-gray-400 font-medium">NMEC</span>
+                <span className="text-gray-400 font-medium">{t("usersPage.nmec")}</span>
                 <span className="text-gray-700 font-semibold">{user.nmec}</span>
               </div>
             )}
             {user.course && (
               <div className="flex justify-between text-sm py-2 border-b border-gray-50">
-                <span className="text-gray-400 font-medium">Course</span>
+                <span className="text-gray-400 font-medium">{t("usersPage.course")}</span>
                 <span className="text-gray-700 font-semibold text-right">{user.course}</span>
               </div>
             )}
             {user.academic_year && (
               <div className="flex justify-between text-sm py-2">
-                <span className="text-gray-400 font-medium">Year</span>
-                <span className="text-gray-700 font-semibold">{user.academic_year}º ano</span>
+                <span className="text-gray-400 font-medium">{t("usersPage.year")}</span>
+                <span className="text-gray-700 font-semibold">{t("usersPage.yearValue", { year: user.academic_year })}</span>
               </div>
             )}
           </div>
@@ -169,10 +172,10 @@ export default function UserDetails({ params }: { params: Promise<{ userId: stri
           <section className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <Folder size={18} className="text-gray-400" />
-              <h2 className="font-bold text-gray-900">Projects ({projects.length})</h2>
+              <h2 className="font-bold text-gray-900">{t("usersPage.projects", { count: projects.length })}</h2>
             </div>
             {projects.length === 0 ? (
-              <p className="text-gray-400 text-sm">No projects.</p>
+              <p className="text-gray-400 text-sm">{t("usersPage.noProjects")}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {projects.map((proj) => {
@@ -203,16 +206,16 @@ export default function UserDetails({ params }: { params: Promise<{ userId: stri
           <section className="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <Cpu size={18} className="text-gray-400" />
-              <h2 className="font-bold text-gray-900">Equipment Requests ({reqs.length})</h2>
+              <h2 className="font-bold text-gray-900">{t("usersPage.equipmentRequests", { count: reqs.length })}</h2>
             </div>
             {reqs.length === 0 ? (
-              <p className="text-gray-400 text-sm">No equipment requests.</p>
+              <p className="text-gray-400 text-sm">{t("usersPage.noRequests")}</p>
             ) : (
               <div className="flex flex-col gap-2">
                 {reqs.map((req) => {
                   const assetName = req.snipeit_asset_id
                     ? (assetNames[req.snipeit_asset_id] ?? `Asset #${req.snipeit_asset_id}`)
-                    : "Unknown asset";
+                    : t("usersPage.unknownAsset");
                   const projectName = projectNames[req.project_id] ?? `Project #${req.project_id}`;
                   const reqDate = new Date(req.created_at).toLocaleDateString("en-GB", {
                     day: "2-digit", month: "short", year: "numeric",
@@ -221,18 +224,18 @@ export default function UserDetails({ params }: { params: Promise<{ userId: stri
                   let statusLabel = req.status;
                   let isOverdue = false;
 
-                  if (req.status === "pending") { statusLabel = "Pending"; }
-                  else if (req.status === "reserved") { statusLabel = "Reserved"; }
-                  else if (req.status === "returned") { statusLabel = "Returned"; }
-                  else if (req.status === "rejected") { statusLabel = "Rejected"; }
+                  if (req.status === "pending") { statusLabel = t("statistics.reqStatus.pending"); }
+                  else if (req.status === "reserved") { statusLabel = t("statistics.reqStatus.reserved"); }
+                  else if (req.status === "returned") { statusLabel = t("statistics.reqStatus.returned"); }
+                  else if (req.status === "rejected") { statusLabel = t("statistics.reqStatus.rejected"); }
                   else if (req.status === "checked_out") {
-                    statusLabel = "Checked Out";
+                    statusLabel = t("statistics.reqStatus.checked_out");
                     if (req.expected_checkin) {
                       const due = new Date(req.expected_checkin);
                       isOverdue = due < now;
                       statusLabel = isOverdue
-                        ? "Overdue"
-                        : `Return by ${due.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`;
+                        ? t("statistics.reqStatus.overdue")
+                        : `${t("statistics.reqStatus.returnBy")} ${due.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}`;
                     }
                   }
 

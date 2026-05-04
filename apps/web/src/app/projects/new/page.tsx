@@ -18,6 +18,7 @@ import {
   type User,
   type EquipmentCatalogItem,
 } from "@/lib/api";
+import { useTranslation } from "react-i18next";
  
 const MEMBER_ROLES = ["member", "observer", "advisor"];
  
@@ -55,7 +56,7 @@ function PeoplePicker({
       {search && (
         <div className="flex flex-col gap-1 max-h-44 overflow-y-auto border border-gray-100 rounded-xl bg-white shadow-sm">
           {filtered.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-3">No results.</p>
+            <p className="text-xs text-gray-400 text-center py-3">{placeholder === "Search available equipment..." ? "No results." : "No results." /* this will be replaced by common.noResults later if needed, but the search uses noResults anyway */}</p>
           ) : filtered.map((u) => (
             <button
               key={u.id}
@@ -80,6 +81,7 @@ function PeoplePicker({
  
 export default function NewProjectPage() {
   const router = useRouter();
+  const { t } = useTranslation();
  
   const [currentUser, setCurrentUser]     = useState<User | null>(null);
   const [supervisors, setSupervisors]     = useState<User[]>([]);
@@ -205,12 +207,12 @@ export default function NewProjectPage() {
           href="/projects"
           className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 mb-6 text-sm font-semibold text-gray-600 shadow-sm transition-colors"
         >
-          <ArrowLeft size={15} /> Back
+          <ArrowLeft size={15} /> {t("projectsPage.new.back")}
         </Link>
  
         <div className="mb-8">
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1">Create New Project</h1>
-          <p className="text-gray-500 text-sm">Fill in the details to submit your project for approval.</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1">{t("projectsPage.new.title")}</h1>
+          <p className="text-gray-500 text-sm">{t("projectsPage.new.subtitle")}</p>
         </div>
  
         <div className="flex flex-col gap-5">
@@ -218,30 +220,30 @@ export default function NewProjectPage() {
           <section className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-5">
               <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg"><FileText size={17} /></div>
-              <h2 className="font-bold text-gray-900">Project Information</h2>
+              <h2 className="font-bold text-gray-900">{t("projectsPage.new.projectInformation")}</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 block">
-                  Project Name <span className="text-red-400">*</span>
+                  {t("projectsPage.new.projectName")} <span className="text-red-400">*</span>
                 </label>
-                <input className={inputClass} placeholder="e.g. Autonomous Solar Drone" value={name} onChange={(e) => setName(e.target.value)} />
+                <input className={inputClass} placeholder={t("projectsPage.new.projectNamePlaceholder")} value={name} onChange={(e) => setName(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 block">Course</label>
-                <input className={inputClass} placeholder="e.g. MIECT" value={course} onChange={(e) => setCourse(e.target.value)} />
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 block">{t("projectsPage.new.course")}</label>
+                <input className={inputClass} placeholder={t("projectsPage.new.coursePlaceholder")} value={course} onChange={(e) => setCourse(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 block">Academic Year</label>
-                <input className={inputClass} placeholder="e.g. 2024/2025" value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} />
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 block">{t("projectsPage.new.academicYear")}</label>
+                <input className={inputClass} placeholder={t("projectsPage.new.academicYearPlaceholder")} value={academicYear} onChange={(e) => setAcademicYear(e.target.value)} />
               </div>
               <div>
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 block">Group Number</label>
-                <input type="number" className={inputClass} placeholder="e.g. 3" value={groupNumber} onChange={(e) => setGroupNumber(e.target.value)} />
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 block">{t("projectsPage.new.groupNumber")}</label>
+                <input type="number" className={inputClass} placeholder={t("projectsPage.new.groupNumberPlaceholder")} value={groupNumber} onChange={(e) => setGroupNumber(e.target.value)} />
               </div>
               <div className="sm:col-span-2">
-                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 block">Description</label>
-                <textarea rows={3} className={`${inputClass} resize-none`} placeholder="Describe the project goals..." value={description} onChange={(e) => setDescription(e.target.value)} />
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 block">{t("projectsPage.new.description")}</label>
+                <textarea rows={3} className={`${inputClass} resize-none`} placeholder={t("projectsPage.new.descriptionPlaceholder")} value={description} onChange={(e) => setDescription(e.target.value)} />
               </div>
             </div>
           </section>
@@ -249,7 +251,7 @@ export default function NewProjectPage() {
           <section className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-5">
               <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg"><ShieldCheck size={17} /></div>
-              <h2 className="font-bold text-gray-900">Supervisors <span className="text-red-400">*</span></h2>
+              <h2 className="font-bold text-gray-900">{t("projectsPage.new.supervisors")} <span className="text-red-400">*</span></h2>
             </div>
  
             {supervisorList.length > 0 && (
@@ -277,8 +279,8 @@ export default function NewProjectPage() {
             )}
  
             <PeoplePicker
-              label="Add supervisor"
-              placeholder="Search by name or email..."
+              label={t("projectsPage.new.addSupervisor")}
+              placeholder={t("projectsPage.new.searchSupervisorPlaceholder")}
               users={supervisors.filter((s) => !members.find((m) => m.user.id === s.id))}
               onAdd={addSupervisor}
               accent="amber"
@@ -288,7 +290,7 @@ export default function NewProjectPage() {
           <section className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-5">
               <div className="p-1.5 bg-teal-50 text-teal-600 rounded-lg"><Users size={17} /></div>
-              <h2 className="font-bold text-gray-900">Team Members</h2>
+              <h2 className="font-bold text-gray-900">{t("projectsPage.new.teamMembers")}</h2>
             </div>
  
             <div className="flex flex-col gap-2 mb-4">
@@ -300,12 +302,12 @@ export default function NewProjectPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="font-semibold text-sm text-gray-800 truncate">
-                        {currentUser.name} <span className="text-gray-400 text-xs font-normal">(you)</span>
+                        {currentUser.name} <span className="text-gray-400 text-xs font-normal">{t("projectsPage.new.you")}</span>
                       </div>
                       <div className="text-xs text-gray-400 truncate">{currentUser.email}</div>
                     </div>
                   </div>
-                  <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase rounded-full shrink-0">Leader</span>
+                  <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase rounded-full shrink-0">{t("projectsPage.new.leader")}</span>
                 </div>
               )}
  
@@ -342,8 +344,8 @@ export default function NewProjectPage() {
             </div>
  
             <PeoplePicker
-              label="Add member"
-              placeholder="Search students..."
+              label={t("projectsPage.new.addMember")}
+              placeholder={t("projectsPage.new.searchMemberPlaceholder")}
               users={availableUsers.filter((u) => !members.find((m) => m.user.id === u.id))}
               onAdd={addMember}
               accent="teal"
@@ -353,13 +355,13 @@ export default function NewProjectPage() {
           <section className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-5">
               <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg"><Cpu size={17} /></div>
-              <h2 className="font-bold text-gray-900">Equipment Request</h2>
-              <span className="text-xs text-gray-400 font-medium ml-1">— optional</span>
+              <h2 className="font-bold text-gray-900">{t("projectsPage.new.equipmentRequest")}</h2>
+              <span className="text-xs text-gray-400 font-medium ml-1">{t("projectsPage.new.optional")}</span>
             </div>
  
             {equipmentItems.length > 0 && (
               <div className="flex flex-col gap-2 mb-4">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Selected ({equipmentItems.length})</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{t("projectsPage.new.selected", { count: equipmentItems.length })}</p>
                 {equipmentItems.map((e) => (
                   <div key={e.model.id} className="flex items-center justify-between p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
                     <div className="flex items-center gap-3 min-w-0">
@@ -370,7 +372,7 @@ export default function NewProjectPage() {
                         <div className="text-sm font-semibold text-gray-800 truncate">{e.model.name}</div>
                         <div className="text-xs text-gray-400">
                           {e.model.asset_tag ? `${e.model.asset_tag} · ` : ""}
-                          {e.model.location ?? "no location"}
+                          {e.model.location ?? t("projectsPage.new.noLocation")}
                         </div>
                       </div>
                     </div>
@@ -386,12 +388,12 @@ export default function NewProjectPage() {
             )}
  
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Add Equipment</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">{t("projectsPage.new.addEquipment")}</p>
               <div className="relative mb-2">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-indigo-400 transition-colors"
-                  placeholder="Search available equipment..."
+                  placeholder={t("projectsPage.new.searchEquipmentPlaceholder")}
                   value={equipSearch}
                   onChange={(e) => setEquipSearch(e.target.value)}
                 />
@@ -414,7 +416,7 @@ export default function NewProjectPage() {
                         <div className="text-sm font-semibold text-gray-800 truncate">{m.name}</div>
                         <div className="text-xs text-gray-400">
                           {m.asset_tag ? `${m.asset_tag} · ` : ""}
-                          {m.location ?? "no location"}
+                          {m.location ?? t("projectsPage.new.noLocation")}
                         </div>
                       </div>
                       <Plus size={14} className="text-gray-400 shrink-0" />
@@ -425,7 +427,7 @@ export default function NewProjectPage() {
  
               {catalog.length === 0 && (
                 <p className="text-xs text-gray-400 text-center py-3 bg-gray-50 rounded-xl border border-gray-100">
-                  No equipment available — all items have active requests.
+                  {t("projectsPage.new.noEquipmentAvailable")}
                 </p>
               )}
             </div>
@@ -434,12 +436,12 @@ export default function NewProjectPage() {
           <section className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-5">
               <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg"><Tag size={17} /></div>
-              <h2 className="font-bold text-gray-900">Tags</h2>
+              <h2 className="font-bold text-gray-900">{t("projectsPage.new.tags")}</h2>
             </div>
             <div className="flex gap-2 mb-3">
               <input
                 className={`${inputClass} flex-1`}
-                placeholder="e.g. robotics, IoT..."
+                placeholder={t("projectsPage.new.tagsPlaceholder")}
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
@@ -465,12 +467,12 @@ export default function NewProjectPage() {
           <section className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-5">
               <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg"><LinkIcon size={17} /></div>
-              <h2 className="font-bold text-gray-900">Links</h2>
+              <h2 className="font-bold text-gray-900">{t("projectsPage.new.links")}</h2>
             </div>
             <div className="flex gap-2 mb-3">
               <input
                 className={`${inputClass} flex-1`}
-                placeholder="https://github.com/..."
+                placeholder={t("projectsPage.new.linksPlaceholder")}
                 value={linkInput}
                 onChange={(e) => setLinkInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addLink())}
@@ -506,14 +508,14 @@ export default function NewProjectPage() {
               href="/projects"
               className="px-6 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-50 transition-colors text-center"
             >
-              Cancel
+              {t("projectsPage.new.cancel")}
             </Link>
             <button
               onClick={handleSubmit}
               disabled={submitting}
               className="px-8 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
-              {submitting ? "Submitting..." : "Submit Project Request"}
+              {submitting ? t("projectsPage.new.submitting") : t("projectsPage.new.submit")}
             </button>
           </div>
         </div>

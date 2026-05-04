@@ -12,6 +12,7 @@ import {
 import { equipment as equipmentApi, requisitions as requisitionsApi, projects as projectsApi, users as usersApi } from "@/lib/api";
 import type { Requisition } from "@/lib/api";
 import Header from "@/app/components/header";
+import { useTranslation } from "react-i18next";
 
 type EquipmentDetail = {
   id: number;
@@ -35,6 +36,7 @@ interface HistoryEvent {
 }
 
 export default function EquipmentDetailsPage() {
+  const { t } = useTranslation();
   const params = useParams<{ equipmentId: string }>();
   const equipmentId = Number(params?.equipmentId);
 
@@ -106,9 +108,9 @@ export default function EquipmentDetailsPage() {
     })();
   }, [equipmentId]);
 
-  if (loading) return <main className="p-8 text-gray-400 animate-pulse"><Header />Loading...</main>;
-  if (error)   return <main className="p-8"><Header /><div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm">Error: {error}</div></main>;
-  if (!item)   return <main className="p-8"><Header /><div className="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-yellow-700 text-sm">Not found.</div></main>;
+  if (loading) return <main className="p-8 text-gray-400 animate-pulse"><Header />{t("equipmentPage.loading")}</main>;
+  if (error)   return <main className="p-8"><Header /><div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm">{t("equipmentPage.error")}{error}</div></main>;
+  if (!item)   return <main className="p-8"><Header /><div className="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-yellow-700 text-sm">{t("equipmentPage.notFound")}</div></main>;
 
   const name      = item.name || `Equipment #${item.id}`;
   const price     = item.price != null && item.price !== "" ? `${item.price}€` : "—";
@@ -129,7 +131,7 @@ export default function EquipmentDetailsPage() {
       <Header />
 
       <Link href="/equipment" className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mb-8 text-sm font-medium">
-        <ArrowLeft size={18} /> Back
+        <ArrowLeft size={18} /> {t("equipmentPage.back")}
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -148,7 +150,7 @@ export default function EquipmentDetailsPage() {
                 <div>
                   <h1 className="text-2xl font-bold">{name}</h1>
                   <span className="inline-block mt-2 px-3 py-1 bg-gray-100 text-gray-500 text-[10px] font-bold uppercase rounded-full">
-                    {item.category ?? "Uncategorized"}
+                    {item.category ?? t("equipmentPage.uncategorized")}
                   </span>
                 </div>
                 <span className="px-3 py-1 bg-gray-100 text-gray-500 text-[10px] font-bold uppercase rounded-full">
@@ -159,11 +161,11 @@ export default function EquipmentDetailsPage() {
           </div>
 
           <div className="border border-gray-200 rounded-2xl p-6 shadow-sm bg-white">
-            <h2 className="text-lg font-bold mb-6">Details</h2>
+            <h2 className="text-lg font-bold mb-6">{t("equipmentPage.details")}</h2>
             <div className="space-y-4">
-              <DetailRow icon={<DollarSign size={20} />} label="Price"     value={price} />
-              <DetailRow icon={<Hash size={20} />}       label="Reference" value={reference} />
-              <DetailRow icon={<MapPin size={20} />}     label="Location"  value={item.location ?? "N/A"} />
+              <DetailRow icon={<DollarSign size={20} />} label={t("equipmentPage.price")}     value={price} />
+              <DetailRow icon={<Hash size={20} />}       label={t("equipmentPage.reference")} value={reference} />
+              <DetailRow icon={<MapPin size={20} />}     label={t("equipmentPage.location")}  value={item.location ?? t("equipmentPage.na")} />
             </div>
           </div>
         </div>
@@ -173,10 +175,10 @@ export default function EquipmentDetailsPage() {
           <div className="border border-gray-200 rounded-2xl p-6 shadow-sm bg-white">
             <div className="flex items-center gap-2 mb-6">
               <FolderOpen size={20} className="text-gray-400" />
-              <h2 className="text-lg font-bold">Projects ({projects.length})</h2>
+              <h2 className="text-lg font-bold">{t("equipmentPage.projects", { count: projects.length })}</h2>
             </div>
             {projects.length === 0 ? (
-              <p className="text-sm text-gray-400">No projects yet.</p>
+              <p className="text-sm text-gray-400">{t("equipmentPage.noProjects")}</p>
             ) : (
               projects.map((proj) => (
                 <Link key={proj.id} href={`/projects/${proj.id}`}>
@@ -197,10 +199,10 @@ export default function EquipmentDetailsPage() {
           <div className="border border-gray-200 rounded-2xl p-6 shadow-sm bg-white">
             <div className="flex items-center gap-2 mb-6">
               <History size={20} className="text-gray-400" />
-              <h2 className="text-lg font-bold">Full History ({history.length})</h2>
+              <h2 className="text-lg font-bold">{t("equipmentPage.fullHistory", { count: history.length })}</h2>
             </div>
             {history.length === 0 ? (
-              <p className="text-sm text-gray-400">No history yet.</p>
+              <p className="text-sm text-gray-400">{t("equipmentPage.noHistory")}</p>
             ) : (
               history.map((evt) => {
                 const isCheckout = evt.type === "checkout";
@@ -217,7 +219,7 @@ export default function EquipmentDetailsPage() {
                         <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
                           isCheckout ? "bg-orange-50 text-orange-500" : "bg-green-50 text-green-600"
                         }`}>
-                          {isCheckout ? "Checkout" : "Return"}
+                          {isCheckout ? t("equipmentPage.checkout") : t("equipmentPage.return")}
                         </span>
                         <span className="text-sm font-semibold text-gray-800 truncate">{evt.projectName}</span>
                       </div>

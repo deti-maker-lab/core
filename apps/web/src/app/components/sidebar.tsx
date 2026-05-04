@@ -140,7 +140,6 @@ export default function Sidebar() {
               >
                 <option value="en">{t("common.en")}</option>
                 <option value="pt">{t("common.pt")}</option>
-                <option value="pl">{t("common.pl")}</option>
               </select>
             </div>
           )}

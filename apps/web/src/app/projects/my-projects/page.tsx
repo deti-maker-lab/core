@@ -7,10 +7,12 @@ import Link from "next/link";
 import { projects as projectsApi, requisitions as reqApi, equipment as equipmentApi, auth } from "@/lib/api";
 import type { Project, Requisition, User } from "@/lib/api";
 import Header from "@/app/components/header";
+import { useTranslation } from "react-i18next";
 
 const FILTERS = ["All", "Pending", "Active", "Completed", "Rejected"];
 
 export default function MyProjectsPage() {
+  const { t } = useTranslation();
   const [myProjects, setMyProjects]         = useState<Project[]>([]);
   const [reqsByProject, setReqsByProject]   = useState<Record<number, Requisition[]>>({});
   const [assetNames, setAssetNames]         = useState<Record<number, string>>({});
@@ -70,14 +72,14 @@ export default function MyProjectsPage() {
 
         <div className="flex justify-between items-start gap-3 mb-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-0.5">My Projects</h1>
-            <p className="text-gray-400 text-sm font-medium">Projects you have submitted</p>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-0.5">{t("projectsPage.myProjects")}</h1>
+            <p className="text-gray-400 text-sm font-medium">{t("projectsPage.myProjectsSubtitle")}</p>
           </div>
           <Link
             href="/projects/new"
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors shadow-sm text-sm shrink-0"
           >
-            <Plus size={16} /> New Project
+            <Plus size={16} /> {t("projectsPage.newProject")}
           </Link>
         </div>
 
@@ -86,25 +88,33 @@ export default function MyProjectsPage() {
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none text-sm text-gray-600 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-colors shadow-sm"
-              placeholder="Search by name..."
+              placeholder={t("projectsPage.searchNamePlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide sm:pb-0 sm:flex-wrap">
-            {FILTERS.map((f) => (
-              <button
-                key={f}
-                onClick={() => setActiveFilter(f)}
-                className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap border transition-all shrink-0 ${
-                  activeFilter === f
-                    ? "bg-indigo-600 text-white border-indigo-600"
-                    : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
+            {FILTERS.map((f) => {
+              let translationKey = "common.all";
+              if (f === "Pending") translationKey = "projectsPage.status.pending";
+              if (f === "Active") translationKey = "projectsPage.status.active";
+              if (f === "Completed") translationKey = "projectsPage.status.completed";
+              if (f === "Rejected") translationKey = "projectsPage.status.rejected";
+              
+              return (
+                <button
+                  key={f}
+                  onClick={() => setActiveFilter(f)}
+                  className={`px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap border transition-all shrink-0 ${
+                    activeFilter === f
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-white text-gray-500 border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  {f === "All" ? t("usersPage.all") : t(translationKey as any)}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -115,7 +125,7 @@ export default function MyProjectsPage() {
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16 text-gray-400 text-sm">No projects found.</div>
+          <div className="text-center py-16 text-gray-400 text-sm">{t("projectsPage.noProjects")}</div>
         ) : (
           <div className="flex flex-col gap-4">
             {filtered.map((proj) => (
@@ -142,14 +152,15 @@ function ProjectCard({
   requisitions: Requisition[];
   assetNames: Record<number, string>;
 }) {
+  const { t } = useTranslation();
   const now = new Date();
 
   const statusConfig: Record<string, { label: string; color: string }> = {
-    pending:     { label: "Awaiting Approval", color: "bg-yellow-50 text-yellow-600 border-yellow-200" },
-    active:      { label: "Active",            color: "bg-green-50 text-green-600 border-green-200" },
-    completed:   { label: "Completed",         color: "bg-blue-50 text-blue-600 border-blue-200" },
-    rejected:    { label: "Rejected",          color: "bg-red-50 text-red-500 border-red-200" },
-    archived:    { label: "Archived",          color: "bg-gray-100 text-gray-500 border-gray-200" },
+    pending:     { label: t("projectsPage.status.awaitingApproval"), color: "bg-yellow-50 text-yellow-600 border-yellow-200" },
+    active:      { label: t("projectsPage.status.active"),            color: "bg-green-50 text-green-600 border-green-200" },
+    completed:   { label: t("projectsPage.status.completed"),         color: "bg-blue-50 text-blue-600 border-blue-200" },
+    rejected:    { label: t("projectsPage.status.rejected"),          color: "bg-red-50 text-red-500 border-red-200" },
+    archived:    { label: t("projectsPage.status.archived"),          color: "bg-gray-100 text-gray-500 border-gray-200" },
   };
   const sc = statusConfig[project.status] ?? { label: project.status, color: "bg-gray-100 text-gray-500 border-gray-200" };
 
@@ -168,7 +179,7 @@ function ProjectCard({
           </div>
 
           <p className="text-sm text-gray-500 mb-4 line-clamp-2">
-            {project.description ?? "No description."}
+            {project.description ?? t("projectsPage.noDescription")}
           </p>
 
           <div className="flex gap-2 flex-wrap">
@@ -179,7 +190,7 @@ function ProjectCard({
             )}
             {project.group_number && (
               <span className="px-3 py-1 border border-gray-200 text-gray-500 text-[10px] font-bold uppercase rounded-full">
-                Group {project.group_number}
+                {t("projectsPage.group")} {project.group_number}
               </span>
             )}
             {project.academic_year && (
@@ -193,39 +204,39 @@ function ProjectCard({
         {requisitions.length > 0 && (
           <div className="border-t border-gray-100 bg-white p-6 pt-4">
             <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
-              Equipment Requests ({requisitions.length})
+              {t("projectsPage.equipmentRequests", { count: requisitions.length })}
             </div>
             <div className="grid grid-cols-2 gap-x-6 gap-y-3">
               {requisitions.map((req) => {
                 const assetName = req.snipeit_asset_id
-                  ? (assetNames[req.snipeit_asset_id] ?? `Asset #${req.snipeit_asset_id}`)
-                  : "Unknown asset";
+                  ? (assetNames[req.snipeit_asset_id] ?? `${t("ledgerPage.asset")} #${req.snipeit_asset_id}`)
+                  : t("ledgerPage.unknownAsset");
 
                 let statusLabel = req.status;
                 let badgeColor  = "bg-gray-100 text-gray-500";
 
                 if (req.status === "pending") {
-                  statusLabel = "Pending";
+                  statusLabel = t("projectsPage.status.pending");
                   badgeColor  = "bg-yellow-50 text-yellow-600";
                 } else if (req.status === "reserved") {
-                  statusLabel = "Reserved";
+                  statusLabel = t("projectsPage.status.reserved");
                   badgeColor  = "bg-purple-50 text-purple-600";
                 } else if (req.status === "returned") {
-                  statusLabel = "Returned";
+                  statusLabel = t("projectsPage.status.returned");
                   badgeColor  = "bg-green-50 text-green-600";
                 } else if (req.status === "rejected") {
-                  statusLabel = "Rejected";
+                  statusLabel = t("projectsPage.status.rejected");
                   badgeColor  = "bg-red-50 text-red-500";
                 } else if (req.status === "checked_out") {
                   if (req.expected_checkin) {
                     const due       = new Date(req.expected_checkin);
                     const isOverdue = due < now;
                     statusLabel = isOverdue
-                      ? "Overdue"
-                      : `Return by ${due.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}`;
+                      ? t("projectsPage.status.overdue")
+                      : `${t("projectsPage.returnBy")} ${due.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}`;
                     badgeColor = isOverdue ? "bg-red-50 text-red-600" : "bg-orange-50 text-orange-600";
                   } else {
-                    statusLabel = "Checked Out";
+                    statusLabel = t("projectsPage.status.checkedOut");
                     badgeColor  = "bg-orange-50 text-orange-600";
                   }
                 }

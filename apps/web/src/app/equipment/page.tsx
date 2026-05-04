@@ -20,12 +20,12 @@ function normalizeStatus(status?: string | null): string {
   return "unknown";
 }
 
-const statusBadge: Record<string, { bg: string; dot: string; label: string }> = {
-  available:     { bg: "bg-green-50 text-green-600",    dot: "bg-green-500",  label: "Available" },
-  reserved:      { bg: "bg-purple-50 text-purple-600",  dot: "bg-purple-500", label: "Reserved" },
-  "checked out": { bg: "bg-orange-50 text-orange-600", dot: "bg-orange-500", label: "Checked Out" },
-  maintenance:   { bg: "bg-yellow-50 text-yellow-600", dot: "bg-yellow-500", label: "Maintenance" },
-  unknown:       { bg: "bg-gray-100 text-gray-500",    dot: "bg-gray-400",   label: "Unknown" },
+const statusBadge: Record<string, { bg: string; dot: string; labelKey: string }> = {
+  available:     { bg: "bg-green-50 text-green-600",    dot: "bg-green-500",  labelKey: "available" },
+  reserved:      { bg: "bg-purple-50 text-purple-600",  dot: "bg-purple-500", labelKey: "reserved" },
+  "checked out": { bg: "bg-orange-50 text-orange-600", dot: "bg-orange-500", labelKey: "checkedOut" },
+  maintenance:   { bg: "bg-yellow-50 text-yellow-600", dot: "bg-yellow-500", labelKey: "maintenance" },
+  unknown:       { bg: "bg-gray-100 text-gray-500",    dot: "bg-gray-400",   labelKey: "unknown" },
 };
 
 export default function EquipmentPage() {
@@ -49,16 +49,16 @@ export default function EquipmentPage() {
               id: Number(item.id),
               model_id: item.model_id,
               model_name: item.model_name,
-              name: item.name ?? "Unnamed equipment",
+              name: item.name ?? t("equipmentPage.unnamedEquipment"),
               asset_tag: item.asset_tag,
               serial: item.serial,
-              category: item.category ?? "Uncategorized",
+              category: item.category ?? t("equipmentPage.uncategorized"),
               supplier: item.supplier,
               price: item.price ?? undefined,
               status: item.status ?? "unknown",
               snipeit_status: item.snipeit_status,
               status_type: item.status_type,
-              location: item.location ?? "Unknown Room",
+              location: item.location ?? t("equipmentPage.unknownRoom"),
               image: item.image ?? undefined,
               assigned_to: item.assigned_to,
               available: item.available ?? false,
@@ -219,7 +219,7 @@ export default function EquipmentPage() {
                       </div>
                       <p className="text-sm text-gray-400 mt-0.5 font-medium flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-gray-200" />
-                        <span className="truncate">{item.location ?? "Unknown location"}</span>
+                        <span className="truncate">{item.location ?? t("equipmentPage.unknownLocation")}</span>
                       </p>
                     </div>
                   </div>
@@ -230,7 +230,7 @@ export default function EquipmentPage() {
                     )}
                     <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider ${badge.bg}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
-                      <span className="inline-block">{badge.label}</span>
+                      <span className="inline-block">{t(`equipmentPage.${badge.labelKey}`)}</span>
                     </span>
                     <div className="p-2 bg-gray-50 rounded-lg group-hover:bg-indigo-50 transition-colors">
                       <ChevronRight size={18} className="text-gray-300 group-hover:text-indigo-500 transition-colors" />

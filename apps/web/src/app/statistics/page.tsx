@@ -218,11 +218,11 @@ export default function StatisticsPage() {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             {[
-              { label: "Pending",     value: pendingReqs,    color: "bg-yellow-50 text-yellow-600 border border-yellow-100" },
-              { label: "Reserved",    value: reservedReqs,   color: "bg-purple-50 text-purple-600 border border-purple-100" },
-              { label: "Checked Out", value: checkedOutReqs, color: "bg-orange-50 text-orange-600 border border-orange-100" },
-              { label: "Returned",    value: returnedReqs,   color: "bg-green-50 text-green-600 border border-green-100" },
-              { label: "Rejected",    value: rejectedReqs,   color: "bg-red-50 text-red-600 border border-red-100" },
+              { label: t("statistics.reqStatus.pending"),     value: pendingReqs,    color: "bg-yellow-50 text-yellow-600 border border-yellow-100" },
+              { label: t("statistics.reqStatus.reserved"),    value: reservedReqs,   color: "bg-purple-50 text-purple-600 border border-purple-100" },
+              { label: t("statistics.reqStatus.checkedOut"), value: checkedOutReqs, color: "bg-orange-50 text-orange-600 border border-orange-100" },
+              { label: t("statistics.reqStatus.returned"),    value: returnedReqs,   color: "bg-green-50 text-green-600 border border-green-100" },
+              { label: t("statistics.reqStatus.rejected"),    value: rejectedReqs,   color: "bg-red-50 text-red-600 border border-red-100" },
             ].map(({ label, value, color }, idx) => (
               <div key={idx} className={`rounded-2xl p-6 text-center shadow-sm hover:-translate-y-1 hover:shadow-md transition-all cursor-default ${color}`}>
                 <div className="text-4xl font-black mb-2">{value}</div>
