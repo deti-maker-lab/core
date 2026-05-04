@@ -19,6 +19,7 @@ class User(SQLModel, table=True):
     nmec: Optional[str] = Field(default=None, max_length=50)
     course: Optional[str] = Field(default=None, max_length=200)
     academic_year: Optional[str] = Field(default=None, max_length=20)
+    legacy_id: Optional[int] = Field(default=None, sa_type=BigInteger, unique=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 # =========================================================
@@ -38,6 +39,7 @@ class Project(SQLModel, table=True):
     tags: Optional[str] = Field(default=None, sa_column=Column(Text))
     links: Optional[str] = Field(default=None, sa_column=Column(Text))
     approved_at: Optional[datetime] = Field(default=None)
+    legacy_id: Optional[int] = Field(default=None, sa_type=BigInteger, unique=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 # =========================================================
@@ -65,6 +67,8 @@ class EquipmentModel(SQLModel, table=True):
     supplier: Optional[str] = Field(default=None, max_length=150)
     price: Optional[Decimal] = Field(default=None, max_digits=10, decimal_places=2)
     snipeit_model_id: Optional[int] = Field(default=None, sa_type=BigInteger, unique=True)
+    legacy_id: Optional[int] = Field(default=None, sa_type=BigInteger, unique=True)
+    legacy_reference_code: Optional[str] = Field(default=None, max_length=100)
     last_synced_at: Optional[datetime] = Field(default=None)
 
 # =========================================================
@@ -79,6 +83,7 @@ class Equipment(SQLModel, table=True):
     location: Optional[str] = Field(default=None, max_length=150)
     status: str = Field(default="available", max_length=50)
     condition: Optional[str] = Field(default=None, max_length=50)
+    legacy_id: Optional[int] = Field(default=None, sa_type=BigInteger, unique=True)
     last_synced_at: Optional[datetime] = Field(default=None)
 
 # =========================================================

@@ -32,6 +32,7 @@ CREATE TABLE users (
     nmec VARCHAR(50),
     course VARCHAR(200),
     academic_year VARCHAR(20),
+    legacy_id BIGINT UNIQUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_users_role
         CHECK (role IN ('student', 'professor', 'lab_technician'))
@@ -52,6 +53,7 @@ CREATE TABLE projects (
     tags TEXT,
     links TEXT,
     approved_at TIMESTAMP,
+    legacy_id BIGINT UNIQUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_projects_created_by
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE RESTRICT,
@@ -88,6 +90,8 @@ CREATE TABLE equipment_models (
     supplier VARCHAR(150),
     price NUMERIC(10,2),
     snipeit_model_id BIGINT UNIQUE,
+    legacy_id BIGINT UNIQUE,
+    legacy_reference_code VARCHAR(100),
     last_synced_at TIMESTAMP
 );
 
@@ -101,6 +105,7 @@ CREATE TABLE equipment (
     location VARCHAR(150),
     status VARCHAR(50) NOT NULL DEFAULT 'available',
     condition VARCHAR(50),
+    legacy_id BIGINT UNIQUE,
     last_synced_at TIMESTAMP,
     CONSTRAINT fk_equipment_model
         FOREIGN KEY (model_id) REFERENCES equipment_models(id) ON DELETE RESTRICT,

@@ -1,0 +1,15 @@
+[project]
+name = "makerlab-migrate"
+version = "0.1.0"
+description = "Migration module for DETI Maker Lab"
+requires-python = ">=3.9"
+dependencies = [
+    "sqlmodel>=0.0.14",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+    "requests>=2.31.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
