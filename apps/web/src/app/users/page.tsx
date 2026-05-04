@@ -1,5 +1,6 @@
 "use client";
 
+// apps/web/src/app/users/page.tsx
 import { useState, useEffect } from "react";
 import { Search, Mail } from "lucide-react";
 import Link from "next/link";
@@ -14,7 +15,7 @@ export default function UsersPage() {
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const filterOptions = [t("usersPage.all"), t("usersPage.students"), t("usersPage.professors"), t("usersPage.technician")];
+  const filterOptions = ["All", "Students", "Professors", "Technician"];
 
   useEffect(() => {
     usersApi.list()
@@ -25,10 +26,10 @@ export default function UsersPage() {
 
   const filteredUsers = userList.filter((user) => {
     const matchesFilter = 
-      activeFilter === t("usersPage.all") || 
-      (activeFilter === t("usersPage.students") && user.role === "student") ||
-      (activeFilter === t("usersPage.professors") && user.role === "professor") ||
-      (activeFilter === t("usersPage.technician") && user.role === "lab_technician");
+      activeFilter === "All" || 
+      (activeFilter === "Students" && user.role === "student") ||
+      (activeFilter === "Professors" && user.role === "professor") ||
+      (activeFilter === "Technician" && user.role === "lab_technician");
 
     const matchesSearch = 
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -39,49 +40,71 @@ export default function UsersPage() {
   });
 
   return (
-    <main className="flex-1 p-8 bg-[#f4f5f7] min-h-screen font-sans text-gray-900">
+    <main className="flex-1 p-4 sm:p-8 bg-[#f4f5f7] min-h-screen font-sans text-gray-900">
       <Header />
 
       <div className="mb-6">
-        <h1 className="text-[32px] font-bold text-gray-900 mb-1">{t("usersPage.title")}</h1>
-        <p className="text-gray-500 font-medium">
+        <h1 className="text-2xl sm:text-[32px] font-bold text-gray-900 mb-0.5">{t("usersPage.title")}</h1>
+        <p className="text-gray-500 text-sm font-medium">
           {loading ? t("common.loading") : t("usersPage.participants", { count: userList.length })}
         </p>
       </div>
 
-      <div className="flex flex-col md:flex-row items-center gap-3 mb-8">
-        <div className="relative flex-1 w-full max-w-2xl">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-2 mb-6 w-full">
+        
+        <div className="relative flex-1">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
-            className="w-full pl-11 pr-4 py-2.5 bg-[#eceef1] border-none rounded-xl outline-none text-sm text-gray-600 placeholder:text-gray-400"
+            className="w-full pl-12 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl outline-none text-sm text-gray-600 placeholder:text-gray-400 transition-all shadow-sm focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10"
             placeholder={t("usersPage.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
 
-        <div className="flex items-center bg-[#eceef1] p-1 rounded-xl overflow-x-auto w-full md:w-auto">
-          {filterOptions.map((option) => (
-            <button
-              key={option}
-              onClick={() => setActiveFilter(option)}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${
-                activeFilter === option
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {option}
-            </button>
-          ))}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide lg:pb-0">
+          {filterOptions.map((option) => {
+            const label = option === "All" ? t("usersPage.all") : 
+                         option === "Students" ? t("usersPage.students") : 
+                         option === "Professors" ? t("usersPage.professors") : 
+                         t("usersPage.technician");
+            
+            return (
+              <button
+                key={option}
+                onClick={() => setActiveFilter(option)}
+                className={`px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap border transition-all shrink-0 ${
+                  activeFilter === option
+                    ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                    : "bg-white text-gray-500 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       </div>
+
+
+      {!loading && (
+        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 px-1">
+            {t("usersPage.results", { count: filteredUsers.length })}
+        </p>
+      )}
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl p-6 h-32 animate-pulse" />
+            <div key={i} className="bg-white border border-transparent rounded-2xl p-6 h-32 animate-pulse shadow-sm" />
           ))}
+        </div>
+      ) : filteredUsers.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <div className="bg-white p-4 rounded-full mb-4 shadow-sm border border-gray-100">
+            <Search size={32} className="text-gray-300" />
+          </div>
+          <p className="text-gray-400 font-medium">{t("usersPage.noResults")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -89,18 +112,18 @@ export default function UsersPage() {
             <Link
               key={user.id}
               href={`/users/${user.id}`}
-              className="group bg-white border border-transparent rounded-2xl p-5 flex items-start gap-4 hover:border-gray-200 hover:shadow-sm transition-all cursor-pointer"
+              className="group bg-white border border-transparent hover:border-indigo-100 rounded-2xl p-5 flex items-start gap-4 transition-all shadow-sm hover:shadow-md cursor-pointer"
             >
-              <div className="w-12 h-12 bg-[#eceef1] rounded-xl flex items-center justify-center shrink-0 text-gray-500 font-bold text-[18px] group-hover:bg-[#e0e7ff] group-hover:text-[#4F46E5] transition-colors">
+              <div className="w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center shrink-0 text-gray-400 font-bold text-[18px] group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors border border-gray-100">
                 {user.name.charAt(0).toUpperCase()}
               </div>
 
               <div className="flex flex-col gap-1 overflow-hidden w-full">
                 <div className="flex justify-between items-start gap-2">
-                  <h3 className="font-bold text-gray-900 text-[16px] truncate group-hover:text-[#4F46E5] transition-colors">
+                  <h3 className="font-bold text-gray-900 text-base truncate group-hover:text-indigo-600 transition-colors">
                     {user.name}
                   </h3>
-                  <span className={`shrink-0 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-md ${
+                  <span className={`shrink-0 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider rounded-lg ${
                     user.role === 'professor' ? 'bg-purple-50 text-purple-600' :
                     user.role === 'lab_technician' ? 'bg-emerald-50 text-emerald-600' :
                     'bg-indigo-50 text-indigo-600'
@@ -110,35 +133,26 @@ export default function UsersPage() {
                 </div>
                 
                 <p className="flex items-center gap-1.5 text-[13px] text-gray-400 truncate font-medium">
-                  <Mail size={12} className="shrink-0" />
+                  <Mail size={12} className="shrink-0 text-gray-300" />
                   {user.email}
                 </p>
                 
                 {user.role === 'student' && user.nmec && (
-                  <p className="text-[12px] text-gray-400 font-bold tracking-tight">
+                  <p className="text-[11px] text-gray-400 font-bold tracking-tight">
                     {user.nmec}
                   </p>
                 )}
                 
-                <div className="flex items-center gap-2 mt-1">
-                  {user.course && (
-                    <span className="inline-block px-2.5 py-1 bg-gray-50 border border-gray-100 text-gray-500 text-[10px] font-bold rounded-md truncate max-w-full uppercase">
+                {user.course && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="inline-block px-2 py-0.5 bg-gray-50 border border-gray-100 text-gray-400 text-[10px] font-bold rounded-lg truncate max-w-full uppercase">
                       {user.course}
                     </span>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </Link>
           ))}
-        </div>
-      )}
-
-      {!loading && filteredUsers.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="bg-[#eceef1] p-4 rounded-full mb-4">
-            <Search size={32} className="text-gray-400" />
-          </div>
-          <p className="text-gray-400 font-medium">{t("usersPage.noResults")}</p>
         </div>
       )}
     </main>

@@ -137,3 +137,9 @@ def get_or_create_user(user_data: dict):
 def create_jwt_for_user(user: User) -> str:
     payload = {"sub": user.email}
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+
+def is_mobile_login(oauth_token: str) -> bool:
+    return __owner_resources.pop(f"mobile_{oauth_token}", None) == "1"
+
+def get_web_redirect(oauth_token: str) -> str | None:
+    return __owner_resources.pop(f"web_redirect_{oauth_token}", None)

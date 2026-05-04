@@ -1,88 +1,90 @@
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext'; 
+// apps/mobile/app/login.tsx
+import { Platform } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, Image } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import * as Linking   from "expo-linking";
+import { useState }   from "react";
+import { useAuth }    from "../context/AuthContext";
+import { useRouter } from "expo-router";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginPage() {
+  const { setTokenAndLoad } = useAuth();
   const router = useRouter();
-  // Importamos o logout aqui!
-  const { login, logout } = useAuth(); 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
 
-  // O TRUQUE: Assim que a página de Login abre no ecrã, 
-  // ela garante que a memória antiga é limpa automaticamente.
-  useEffect(() => {
-    logout();
-  }, []);
-
-  const handleLogin = (role: 'tech' | 'student') => {
-    login(role); 
-    router.replace('/(tabs)'); 
+  const handleSSO = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (Platform.OS === "web") {
+        const currentUrl = window.location.origin;
+        window.location.href = `https://deti-makerlab.ua.pt/api/auth/sso/login/mobile?web_redirect=${encodeURIComponent(currentUrl + "/auth/callback")}`;
+      } else {
+        // Nativo — usa deep link
+        const redirectUri = Linking.createURL("auth");
+        const result = await WebBrowser.openAuthSessionAsync(
+          "https://deti-makerlab.ua.pt/api/auth/sso/login/mobile",
+          redirectUri
+        );
+        if (result.type === "success" && result.url) {
+          const parsed = Linking.parse(result.url);
+          const token  = parsed.queryParams?.token as string | undefined;
+          if (token) await setTokenAndLoad(token);
+          else setError("No token received.");
+        } else if (result.type === "cancel") {
+          setError("Login cancelled.");
+        }
+      }
+    } catch (e: any) {
+      setError(e.message ?? "Login failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <View className="flex-1 bg-gray-50 items-center justify-center p-6">
-      
-      <View className="w-full max-w-md bg-white p-8 rounded-3xl shadow-sm border border-gray-200 items-center">
-        
-        <View className="bg-gray-900 w-16 h-16 rounded-2xl items-center justify-center mb-6 shadow-md">
-          <Feather name="share-2" size={32} color="white" />
+    <View className="flex-1 bg-[#f4f5f7] items-center justify-center px-6">
+      <View className="w-full max-w-sm bg-white rounded-3xl p-8 shadow-sm border border-gray-100 items-center">
+
+        <View className="w-16 h-16 bg-indigo-600 rounded-2xl items-center justify-center mb-6">
+          <Text className="text-white font-black text-xl">DM</Text>
         </View>
 
-        <Text className="text-3xl font-bold text-gray-900 mb-2">DETI Maker Lab</Text>
-        <Text className="text-gray-500 mb-8 text-center">Sign in to your account to manage projects and equipment.</Text>
+        <Text className="text-2xl font-bold text-gray-900 mb-1">DETI Maker Lab</Text>
+        <Text className="text-sm text-gray-400 text-center mb-8 leading-relaxed">
+          Sign in with your University of Aveiro account to access the lab.
+        </Text>
 
-        <View className="w-full mb-4">
-          <Text className="text-sm font-bold text-gray-700 mb-2 ml-1">University Email</Text>
-          <View className="flex-row items-center bg-gray-50 border border-gray-300 rounded-xl px-4 py-3">
-            <Feather name="mail" size={20} color="#9CA3AF" />
-            <TextInput 
-              className="flex-1 ml-3 text-base text-gray-900"
-              placeholder="name@ua.pt"
-              placeholderTextColor="#9CA3AF"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-            />
+        {error && (
+          <View className="w-full bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-4">
+            <Text className="text-red-600 text-sm text-center">{error}</Text>
           </View>
-        </View>
+        )}
 
-        <View className="w-full mb-8">
-          <Text className="text-sm font-bold text-gray-700 mb-2 ml-1">Password</Text>
-          <View className="flex-row items-center bg-gray-50 border border-gray-300 rounded-xl px-4 py-3">
-            <Feather name="lock" size={20} color="#9CA3AF" />
-            <TextInput 
-              className="flex-1 ml-3 text-base text-gray-900"
-              placeholder="••••••••"
-              placeholderTextColor="#9CA3AF"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-            />
-          </View>
-        </View>
+        <TouchableOpacity
+          onPress={handleSSO}
+          disabled={loading}
+          className="w-full bg-indigo-600 py-4 rounded-2xl items-center active:bg-indigo-700"
+          style={{ opacity: loading ? 0.7 : 1 }}
+        >
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text className="text-white font-bold text-base">
+              Sign in with UA Account
+            </Text>
+          )}
+        </TouchableOpacity>
 
-        <View className="w-full gap-3">
-          <TouchableOpacity 
-            onPress={() => handleLogin('student')}
-            className="w-full bg-gray-900 py-4 rounded-xl items-center active:bg-gray-800"
-          >
-            <Text className="text-white font-bold text-lg">Login as Student</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            onPress={() => handleLogin('tech')}
-            className="w-full bg-white border-2 border-gray-200 py-4 rounded-xl items-center active:bg-gray-50"
-          >
-            <Text className="text-gray-700 font-bold text-lg">Login as Technician</Text>
-          </TouchableOpacity>
-        </View>
-
+        <Text className="mt-6 text-xs text-gray-300 text-center">
+          You will be redirected to the University of Aveiro identity service.
+        </Text>
       </View>
 
-      <Text className="mt-8 text-gray-400 text-sm">© 2026 Universidade de Aveiro</Text>
+      <Text className="mt-8 text-gray-400 text-xs">© 2026 Universidade de Aveiro</Text>
     </View>
   );
 }

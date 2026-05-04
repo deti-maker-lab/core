@@ -81,6 +81,7 @@ class RequisitionRead(BaseModel):
     approved_at: Optional[datetime] = None
     checked_out_at: Optional[datetime] = None
     returned_at: Optional[datetime] = None
+    expected_checkin: Optional[datetime] = None
     created_at: datetime
 
     class Config:

@@ -2,12 +2,12 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
-from typing import List
+from typing import List, Optional
 from db.database import get_session
 from db.models import User
 from routers.schemas import EquipmentModelRead, EquipmentRead, EquipmentCatalogItemRead
 from services.inventory_service import list_catalog, sync_catalog, sync_equipment, list_equipment_catalog_from_snipeit
-from auth.dependencies import require_any, require_lab_tech
+from auth.dependencies import require_any, require_lab_tech, require_optional
 
 router = APIRouter(prefix="/equipment", tags=["equipment"])
 
@@ -30,7 +30,7 @@ def _parse_price(value):
     return None
 
 @router.get("/catalog", response_model=List[EquipmentCatalogItemRead])
-def get_catalog(session: Session = Depends(get_session), current_user=Depends(require_any)):
+def get_catalog(session: Session = Depends(get_session), current_user: Optional[User] = Depends(require_optional)):
     return list_equipment_catalog_from_snipeit(session=session)
 
 @router.post("/catalog/sync", status_code=status.HTTP_200_OK)
@@ -46,7 +46,7 @@ def trigger_catalog_sync(session: Session = Depends(get_session), current_user: 
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{equipment_id}", response_model=EquipmentCatalogItemRead)
-def get_equipment_detail(equipment_id: int):
+def get_equipment_detail(equipment_id: int, current_user: Optional[User] = Depends(require_optional)):
     from services.snipeit.assets import get_asset
 
     asset = get_asset(equipment_id)
@@ -123,3 +123,24 @@ def get_equipment_projects(
             })
 
     return projects
+
+@router.get("/catalog/available", response_model=List[EquipmentCatalogItemRead])
+def get_available_catalog(
+    session: Session = Depends(get_session),
+    current_user: Optional[User] = Depends(require_optional)
+):
+    from sqlmodel import select
+    from db.models import EquipmentRequest
+
+    active_reqs = session.exec(
+        select(EquipmentRequest.snipeit_asset_id)
+        .where(EquipmentRequest.status.in_(["pending", "reserved"]))
+        .where(EquipmentRequest.snipeit_asset_id.is_not(None))
+    ).all()
+    blocked_ids = set(active_reqs)
+
+    all_catalog = list_equipment_catalog_from_snipeit(session=session)
+    return [
+        item for item in all_catalog
+        if item["available"] and item["id"] not in blocked_ids
+    ]

@@ -1,5 +1,6 @@
 "use client";
 
+// apps/web/src/app/equipment/[equipmentId]/page.tsx
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -11,6 +12,7 @@ import {
 import { equipment as equipmentApi, requisitions as requisitionsApi, projects as projectsApi, users as usersApi } from "@/lib/api";
 import type { Requisition } from "@/lib/api";
 import Header from "@/app/components/header";
+import { useTranslation } from "react-i18next";
 
 type EquipmentDetail = {
   id: number;
@@ -34,6 +36,7 @@ interface HistoryEvent {
 }
 
 export default function EquipmentDetailsPage() {
+  const { t } = useTranslation();
   const params = useParams<{ equipmentId: string }>();
   const equipmentId = Number(params?.equipmentId);
 
@@ -50,14 +53,12 @@ export default function EquipmentDetailsPage() {
         const asset = await equipmentApi.get(equipmentId);
         setItem(asset as EquipmentDetail);
 
-        // Busca todas as requisitions deste asset
         const allReqs = await requisitionsApi.list() as Requisition[];
         const assetReqs = allReqs.filter(
           (r) => r.snipeit_asset_id === equipmentId &&
                  ["reserved", "checked_out", "returned"].includes(r.status)
         );
 
-        // Carrega projetos e users únicos
         const projectIds = [...new Set(assetReqs.map((r) => r.project_id))];
         const userIds    = [...new Set(assetReqs.map((r) => r.requested_by))];
 
@@ -83,10 +84,8 @@ export default function EquipmentDetailsPage() {
           if (r.status === "fulfilled") uMap[userIds[i]] = r.value.name;
         });
 
-        // Projetos únicos
         setProjects(Object.values(pMap));
 
-        // Histórico de eventos
         const evts: HistoryEvent[] = [];
         for (const req of assetReqs) {
           const projectName = pMap[req.project_id]?.name ?? `Project #${req.project_id}`;
@@ -109,9 +108,9 @@ export default function EquipmentDetailsPage() {
     })();
   }, [equipmentId]);
 
-  if (loading) return <main className="p-8 text-gray-400 animate-pulse"><Header />Loading...</main>;
-  if (error)   return <main className="p-8"><Header /><div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm">Error: {error}</div></main>;
-  if (!item)   return <main className="p-8"><Header /><div className="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-yellow-700 text-sm">Not found.</div></main>;
+  if (loading) return <main className="p-8 text-gray-400 animate-pulse"><Header />{t("equipmentPage.loading")}</main>;
+  if (error)   return <main className="p-8"><Header /><div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm">{t("equipmentPage.error")}{error}</div></main>;
+  if (!item)   return <main className="p-8"><Header /><div className="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-yellow-700 text-sm">{t("equipmentPage.notFound")}</div></main>;
 
   const name      = item.name || `Equipment #${item.id}`;
   const price     = item.price != null && item.price !== "" ? `${item.price}€` : "—";
@@ -132,11 +131,10 @@ export default function EquipmentDetailsPage() {
       <Header />
 
       <Link href="/equipment" className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors mb-8 text-sm font-medium">
-        <ArrowLeft size={18} /> Back
+        <ArrowLeft size={18} /> {t("equipmentPage.back")}
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left */}
         <div className="flex flex-col gap-6">
           <div className="border border-gray-200 rounded-2xl overflow-hidden shadow-sm bg-white">
             <div className="h-64 bg-gray-50 flex items-center justify-center border-b border-gray-100 overflow-hidden">
@@ -152,7 +150,7 @@ export default function EquipmentDetailsPage() {
                 <div>
                   <h1 className="text-2xl font-bold">{name}</h1>
                   <span className="inline-block mt-2 px-3 py-1 bg-gray-100 text-gray-500 text-[10px] font-bold uppercase rounded-full">
-                    {item.category ?? "Uncategorized"}
+                    {item.category ?? t("equipmentPage.uncategorized")}
                   </span>
                 </div>
                 <span className="px-3 py-1 bg-gray-100 text-gray-500 text-[10px] font-bold uppercase rounded-full">
@@ -163,26 +161,24 @@ export default function EquipmentDetailsPage() {
           </div>
 
           <div className="border border-gray-200 rounded-2xl p-6 shadow-sm bg-white">
-            <h2 className="text-lg font-bold mb-6">Details</h2>
+            <h2 className="text-lg font-bold mb-6">{t("equipmentPage.details")}</h2>
             <div className="space-y-4">
-              <DetailRow icon={<DollarSign size={20} />} label="Price"     value={price} />
-              <DetailRow icon={<Hash size={20} />}       label="Reference" value={reference} />
-              <DetailRow icon={<MapPin size={20} />}     label="Location"  value={item.location ?? "N/A"} />
+              <DetailRow icon={<DollarSign size={20} />} label={t("equipmentPage.price")}     value={price} />
+              <DetailRow icon={<Hash size={20} />}       label={t("equipmentPage.reference")} value={reference} />
+              <DetailRow icon={<MapPin size={20} />}     label={t("equipmentPage.location")}  value={item.location ?? t("equipmentPage.na")} />
             </div>
           </div>
         </div>
 
-        {/* Right */}
         <div className="flex flex-col gap-6">
 
-          {/* Projects */}
           <div className="border border-gray-200 rounded-2xl p-6 shadow-sm bg-white">
             <div className="flex items-center gap-2 mb-6">
               <FolderOpen size={20} className="text-gray-400" />
-              <h2 className="text-lg font-bold">Projects ({projects.length})</h2>
+              <h2 className="text-lg font-bold">{t("equipmentPage.projects", { count: projects.length })}</h2>
             </div>
             {projects.length === 0 ? (
-              <p className="text-sm text-gray-400">No projects yet.</p>
+              <p className="text-sm text-gray-400">{t("equipmentPage.noProjects")}</p>
             ) : (
               projects.map((proj) => (
                 <Link key={proj.id} href={`/projects/${proj.id}`}>
@@ -200,14 +196,13 @@ export default function EquipmentDetailsPage() {
             )}
           </div>
 
-          {/* Full History */}
           <div className="border border-gray-200 rounded-2xl p-6 shadow-sm bg-white">
             <div className="flex items-center gap-2 mb-6">
               <History size={20} className="text-gray-400" />
-              <h2 className="text-lg font-bold">Full History ({history.length})</h2>
+              <h2 className="text-lg font-bold">{t("equipmentPage.fullHistory", { count: history.length })}</h2>
             </div>
             {history.length === 0 ? (
-              <p className="text-sm text-gray-400">No history yet.</p>
+              <p className="text-sm text-gray-400">{t("equipmentPage.noHistory")}</p>
             ) : (
               history.map((evt) => {
                 const isCheckout = evt.type === "checkout";
@@ -224,7 +219,7 @@ export default function EquipmentDetailsPage() {
                         <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
                           isCheckout ? "bg-orange-50 text-orange-500" : "bg-green-50 text-green-600"
                         }`}>
-                          {isCheckout ? "Checkout" : "Return"}
+                          {isCheckout ? t("equipmentPage.checkout") : t("equipmentPage.return")}
                         </span>
                         <span className="text-sm font-semibold text-gray-800 truncate">{evt.projectName}</span>
                       </div>
