@@ -25,9 +25,10 @@ def upsert_user(
     Returns (user, action) where action is 'INSERT' or 'UPDATE'.
     """
     # Try to find by legacy_id first
-    user = session.exec(
+    result = session.execute(
         select(User).where(User.legacy_id == legacy_id)
-    ).first()
+    )
+    user = result.scalars().first()
     
     if user:
         # Update existing user
@@ -41,9 +42,10 @@ def upsert_user(
         return user, "UPDATE"
     
     # Fallback: check for duplicate by email
-    user = session.exec(
+    result = session.execute(
         select(User).where(User.email == email)
-    ).first()
+    )
+    user = result.scalars().first()
     
     if user:
         # Update existing user and set legacy_id
@@ -84,9 +86,10 @@ def upsert_project(
     Upsert a project by legacy_id.
     Returns (project, action) where action is 'INSERT' or 'UPDATE'.
     """
-    project = session.exec(
+    result = session.execute(
         select(Project).where(Project.legacy_id == legacy_id)
-    ).first()
+    )
+    project = result.scalars().first()
     
     if project:
         # Update existing project
@@ -115,6 +118,7 @@ def upsert_project(
         group_number=group_number
     )
     session.add(project)
+    session.flush()  # Generate the ID before returning
     return project, "INSERT"
 
 
@@ -128,12 +132,13 @@ def upsert_project_member(
     Upsert a project member by (project_id, user_id).
     Returns (member, action) where action is 'INSERT' or 'UPDATE'.
     """
-    member = session.exec(
+    result = session.execute(
         select(ProjectMember).where(
             ProjectMember.project_id == project_id,
             ProjectMember.user_id == user_id
         )
-    ).first()
+    )
+    member = result.scalars().first()
     
     if member:
         # Update existing member
@@ -165,9 +170,10 @@ def upsert_equipment_model(
     Upsert an equipment model by legacy_id.
     Returns (model, action) where action is 'INSERT' or 'UPDATE'.
     """
-    model = session.exec(
+    result = session.execute(
         select(EquipmentModel).where(EquipmentModel.legacy_id == legacy_id)
-    ).first()
+    )
+    model = result.scalars().first()
     
     if model:
         # Update existing model
@@ -198,6 +204,7 @@ def upsert_equipment_model(
         price=price
     )
     session.add(model)
+    session.flush()  # Flush to get the generated ID
     return model, "INSERT"
 
 
@@ -213,9 +220,10 @@ def upsert_equipment(
     Upsert equipment by legacy_id.
     Returns (equipment, action) where action is 'INSERT' or 'UPDATE'.
     """
-    equipment = session.exec(
+    result = session.execute(
         select(Equipment).where(Equipment.legacy_id == legacy_id)
-    ).first()
+    )
+    equipment = result.scalars().first()
     
     if equipment:
         # Update existing equipment
@@ -241,23 +249,26 @@ def upsert_equipment(
 
 def find_user_by_legacy_id(session: Session, legacy_id: int) -> Optional[User]:
     """Find a user by legacy_id."""
-    return session.exec(
+    result = session.execute(
         select(User).where(User.legacy_id == legacy_id)
-    ).first()
+    )
+    return result.scalars().first()
 
 
 def find_project_by_legacy_id(session: Session, legacy_id: int) -> Optional[Project]:
     """Find a project by legacy_id."""
-    return session.exec(
+    result = session.execute(
         select(Project).where(Project.legacy_id == legacy_id)
-    ).first()
+    )
+    return result.scalars().first()
 
 
 def find_equipment_model_by_legacy_id(session: Session, legacy_id: int) -> Optional[EquipmentModel]:
     """Find an equipment model by legacy_id."""
-    return session.exec(
+    result = session.execute(
         select(EquipmentModel).where(EquipmentModel.legacy_id == legacy_id)
-    ).first()
+    )
+    return result.scalars().first()
 
 
 def save_checkpoint(session: Session, entity_type: str, last_legacy_id: int) -> None:

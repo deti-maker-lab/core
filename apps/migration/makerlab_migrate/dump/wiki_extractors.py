@@ -103,13 +103,14 @@ def parse_equipment_markdown(content: str) -> Dict[str, Any]:
     }
     
     # Regex patterns for equipment fields
+    # Use non-greedy match with lookahead for end of value (newline or next field)
     patterns = {
-        "family": r"\*\*\s*Família:\s*\*\*\s*(.*?)\s*$",
-        "sub_family": r"\*\*\s*Sub-Família:\s*\*\*\s*(.*?)\s*$",
-        "codigo": r"\*\*\s*Código:\s*\*\*\s*(.*?)\s*$",
+        "family": r"\*\*\s*Família:\s*\*\*\s*(.+?)(?=\r?\n|\*\*|$)",
+        "sub_family": r"\*\*\s*Sub-Família:\s*\*\*\s*(.+?)(?=\r?\n|\*\*|$)",
+        "codigo": r"\*\*\s*Código:\s*\*\*\s*(.+?)(?=\r?\n|\*\*|$)",
         "price": r"\*\*\s*Preço\s*\(c/\s*IVA\):\s*\*\*\s*([\d.,]+)",
-        "supplier": r"\*\*\s*Fornecedor:\s*\*\*\s*(.*?)\s*$",
-        "location": r"\*\*\s*Localização:\s*\*\*\s*(.*?)\s*$",
+        "supplier": r"\*\*\s*Fornecedor:\s*\*\*\s*(.+?)(?=\r?\n|\*\*|$)",
+        "location": r"\*\*\s*Localização:\s*\*\*\s*(.+?)(?=\r?\n|\*\*|$)",
     }
     
     for field, pattern in patterns.items():

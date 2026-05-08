@@ -4,20 +4,21 @@ import os
 from pathlib import Path
 from typing import Dict, Optional
 from pydantic_settings import BaseSettings
+from pydantic import Field
 
 
 class MigrationSettings(BaseSettings):
     """Configuration for the migration module."""
     
-    # Dump file path
-    dump_path: Path
+    # Dump file path - can be set via env var or passed directly
+    dump_path: Path = Field(default_factory=lambda: Path(os.getenv("DUMP_PATH", ".")))
     
-    # PostgreSQL connection
-    postgres_uri: str
+    # PostgreSQL connection - can be POSTGRES_URL or DATABASE_URL
+    postgres_uri: str = Field(default_factory=lambda: os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL", ""))
     
     # Snipe-IT configuration
-    snipeit_url: str
-    snipeit_token: str
+    snipeit_url: str = Field(default="")
+    snipeit_token: str = Field(default="")
     snipeit_timeout_seconds: int = 10
     
     # Snipe-IT category and manufacturer mappings
@@ -32,20 +33,30 @@ class MigrationSettings(BaseSettings):
     # Batch size for processing
     batch_size: int = 100
     
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore"
+    }
     
     @classmethod
     def from_env(cls, dump_path: str) -> "MigrationSettings":
         """Load settings from environment variables."""
+        import os
+        import json
+        from dotenv import load_dotenv
+        
+        # Explicitly load .env file from the migration directory (parent of this file's dir)
+        env_path = Path(__file__).parent.parent / ".env"
+        if env_path.exists():
+            load_dotenv(env_path, override=True)
+            print(f"Loaded .env from: {env_path}")
+        
         # Parse category and manufacturer maps from JSON strings
         category_map_str = os.getenv("SNIPEIT_CATEGORY_MAP", "{}")
         manufacturer_map_str = os.getenv("SNIPEIT_MANUFACTURER_MAP", "{}")
         
         try:
-            import json
             category_map = json.loads(category_map_str)
             manufacturer_map = json.loads(manufacturer_map_str)
         except json.JSONDecodeError:
@@ -54,7 +65,7 @@ class MigrationSettings(BaseSettings):
         
         return cls(
             dump_path=Path(dump_path),
-            postgres_uri=os.getenv("POSTGRES_URI", os.getenv("DATABASE_URL", "")),
+            postgres_uri=os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL", ""),
             snipeit_url=os.getenv("SNIPEIT_BASE_URL", ""),
             snipeit_token=os.getenv("SNIPEIT_API_TOKEN", ""),
             snipeit_timeout_seconds=int(os.getenv("SNIPEIT_TIMEOUT_SECONDS", "10")),
@@ -63,7 +74,7 @@ class MigrationSettings(BaseSettings):
             snipeit_category_map=category_map,
             snipeit_manufacturer_map=manufacturer_map,
             snipeit_default_category_id=int(os.getenv("SNIPEIT_DEFAULT_CATEGORY_ID", "1")),
-            snipeit_default_manufacturer_id=int(os.getenv("SNIPEIT_DEFAULT_MANUFACTURER_ID", "1")),
+            snipeit_default_manufacturer_id=int(os.getenv("SNIPEIT_DEFAULT_MANUFACTURER_ID", "1"))
         )
     
     def validate(self, skip_snipeit: bool = False, skip_db_validation: bool = False) -> list[str]:
@@ -76,7 +87,7 @@ class MigrationSettings(BaseSettings):
         # Only validate database settings if not skipping
         if not skip_db_validation:
             if not self.postgres_uri:
-                errors.append("POSTGRES_URI or DATABASE_URL environment variable is required")
+                errors.append("POSTGRES_URL or DATABASE_URL environment variable is required")
 
         # Only validate Snipe-IT settings if not skipping
         if not skip_snipeit and not skip_db_validation:
