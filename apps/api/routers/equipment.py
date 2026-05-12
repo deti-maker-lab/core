@@ -130,14 +130,21 @@ def get_available_catalog(
     current_user: Optional[User] = Depends(require_optional)
 ):
     from sqlmodel import select
-    from db.models import EquipmentRequest
+    from db.models import EquipmentUsage, Equipment as EquipmentModel
 
-    active_reqs = session.exec(
-        select(EquipmentRequest.snipeit_asset_id)
-        .where(EquipmentRequest.status.in_(["pending", "reserved"]))
-        .where(EquipmentRequest.snipeit_asset_id.is_not(None))
+    # Assets que estão actualmente em uso (checked_out ou assigned)
+    active_usages = session.exec(
+        select(EquipmentUsage.equipment_id)
+        .where(EquipmentUsage.status.in_(["checked_out", "assigned"]))
     ).all()
-    blocked_ids = set(active_reqs)
+
+    # Converte para snipeit_asset_id para comparar com o catálogo
+    blocked_equipment = session.exec(
+        select(EquipmentModel.snipeit_asset_id)
+        .where(EquipmentModel.id.in_(active_usages))
+        .where(EquipmentModel.snipeit_asset_id.is_not(None))
+    ).all()
+    blocked_ids = set(blocked_equipment)
 
     all_catalog = list_equipment_catalog_from_snipeit(session=session)
     return [

@@ -142,40 +142,6 @@ INSERT INTO equipment (model_id, snipeit_asset_id, location, status, condition, 
     (10, 15, 'Maker Lab Shelf A2',   'available',   'good',    NOW()),
     (10, 16, 'Maker Lab Shelf A2',   'available',   'good',    NOW());
 
--- =========================================================
--- EQUIPMENT REQUEST
--- =========================================================
-INSERT INTO equipment_request (project_id, requested_by, status, approved_at, created_at) VALUES
-    (1, 5, 'reserved',  CURRENT_TIMESTAMP - INTERVAL '18 days', CURRENT_TIMESTAMP - INTERVAL '20 days'),
-    (2, 6, 'pending',   NULL,                                    CURRENT_TIMESTAMP - INTERVAL '2 days'),
-    (3, 7, 'reserved',  CURRENT_TIMESTAMP - INTERVAL '10 days', CURRENT_TIMESTAMP - INTERVAL '12 days'),
-    (4, 8, 'fulfilled', CURRENT_TIMESTAMP - INTERVAL '55 days', CURRENT_TIMESTAMP - INTERVAL '58 days'),
-    (5, 9, 'rejected',  NULL,                                    CURRENT_TIMESTAMP - INTERVAL '5 days');
-
--- =========================================================
--- EQUIPMENT REQUEST ITEMS
--- =========================================================
-INSERT INTO equipment_request_items (request_id, equipment_id) VALUES
-    (1, 1),   -- Arduino para Smart Irrigation
-    (1, 10),  -- Soil Moisture para Smart Irrigation
-    (2, 4),   -- Raspberry Pi para Delivery Rover
-    (2, 8),   -- Ultrasonic para Delivery Rover
-    (2, 13),  -- Motor Driver para Delivery Rover
-    (3, 6),   -- ESP32 para Air Quality
-    (3, 11),  -- MQ-135 para Air Quality
-    (4, 12),  -- RFID para Smart Door Lock
-    (4, 9),   -- Ultrasonic para Smart Door Lock
-    (5, 13);  -- Motor Driver para Line Following
-
--- =========================================================
--- EQUIPMENT USAGE
--- =========================================================
-INSERT INTO equipment_usage (equipment_id, project_id, request_item_id, checked_out_at, due_at, returned_at, status) VALUES
-    (1,  1, 1,  CURRENT_TIMESTAMP - INTERVAL '17 days', CURRENT_TIMESTAMP + INTERVAL '13 days', NULL,                                    'checked_out'),
-    (10, 1, 2,  CURRENT_TIMESTAMP - INTERVAL '17 days', CURRENT_TIMESTAMP + INTERVAL '13 days', NULL,                                    'checked_out'),
-    (6,  3, 6,  CURRENT_TIMESTAMP - INTERVAL '9 days',  CURRENT_TIMESTAMP + INTERVAL '21 days', NULL,                                    'checked_out'),
-    (12, 4, 8,  CURRENT_TIMESTAMP - INTERVAL '54 days', CURRENT_TIMESTAMP - INTERVAL '10 days', CURRENT_TIMESTAMP - INTERVAL '12 days',  'returned'),
-    (9,  4, 9,  CURRENT_TIMESTAMP - INTERVAL '54 days', CURRENT_TIMESTAMP - INTERVAL '10 days', CURRENT_TIMESTAMP - INTERVAL '11 days',  'returned');
 
 -- =========================================================
 -- STATUS HISTORY

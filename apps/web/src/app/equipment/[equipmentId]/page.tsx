@@ -108,6 +108,10 @@ export default function EquipmentDetailsPage() {
     })();
   }, [equipmentId]);
 
+  useEffect(() => {
+    requisitionsApi.syncSnipeit().catch(console.error);
+  }, []);
+
   if (loading) return <main className="p-8 text-gray-400 animate-pulse"><Header />{t("equipmentPage.loading")}</main>;
   if (error)   return <main className="p-8"><Header /><div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm">{t("equipmentPage.error")}{error}</div></main>;
   if (!item)   return <main className="p-8"><Header /><div className="rounded-xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-yellow-700 text-sm">{t("equipmentPage.notFound")}</div></main>;

@@ -89,6 +89,10 @@ export default function LedgerPage() {
     })();
   }, []);
 
+  useEffect(() => {
+    requisitionsApi.syncSnipeit().catch(console.error);
+  }, []);
+
   const filtered = useMemo(() => {
     if (!search.trim()) return events;
     const q = search.toLowerCase();

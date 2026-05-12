@@ -118,10 +118,17 @@ def reject_requisition(session: Session, req_id: int, user_id: int, reason: str)
     session.refresh(req)
     return req
 
+def _parse_snipeit_date(date_str: str | None):
+    if not date_str:
+        return datetime.now(timezone.utc)
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return datetime.now(timezone.utc)
+
 
 def sync_from_snipeit_logs(session: Session) -> dict:
     from services.snipeit.client import snipeit_client
-    from datetime import date
 
     stats = {"checked_out": 0, "returned": 0, "errors": 0}
 
@@ -131,6 +138,9 @@ def sync_from_snipeit_logs(session: Session) -> dict:
             params={"limit": 200}
         )
         rows = response.get("rows") or []
+        print(f"Rows received: {len(rows)}", flush=True)
+        for r in rows:
+            print(f"  row id={r.get('id')} action={r.get('action_type')} item={r.get('item')}", flush=True)
     except Exception as e:
         logger.error(f"Failed to fetch Snipe-IT activity logs: {e}")
         return stats
@@ -154,37 +164,44 @@ def sync_from_snipeit_logs(session: Session) -> dict:
                 continue
 
             if action_type == "checkout" and req.status == "reserved":
-                # Extrai expected_checkin do log_meta
                 log_meta = row.get("log_meta") or {}
                 expected_raw = None
                 if "expected_checkin" in log_meta:
                     val = log_meta["expected_checkin"]
                     expected_raw = val.get("new") if isinstance(val, dict) else val
-                
+
+                action_date = _parse_snipeit_date(row.get("action_date"))
                 req.status = "checked_out"
-                req.checked_out_at = datetime.now(timezone.utc)
+                req.checked_out_at = action_date
                 if expected_raw:
                     try:
                         req.expected_checkin = datetime.strptime(expected_raw, "%Y-%m-%d")
                     except Exception:
                         pass
-                
+
                 _add_history(session, req.id, "reserved", "checked_out", 1,
                              "Auto-synced: checkout detected in Snipe-IT")
                 stats["checked_out"] += 1
 
             elif action_type == "checkin from" and req.status == "checked_out":
+                action_date = _parse_snipeit_date(row.get("action_date"))
                 req.status = "returned"
-                req.returned_at = datetime.now(timezone.utc)
+                req.returned_at = action_date
                 _add_history(session, req.id, "checked_out", "returned", 1,
                              "Auto-synced: checkin detected in Snipe-IT")
                 stats["returned"] += 1
 
         except Exception as e:
             logger.warning(f"Error processing row {row.get('id')}: {e}")
+            session.rollback()
             stats["errors"] += 1
 
-    session.commit()
+    try:
+        session.commit()
+    except Exception as e:
+        logger.error(f"Failed to commit sync: {e}")
+        session.rollback()
+
     return stats
 
 

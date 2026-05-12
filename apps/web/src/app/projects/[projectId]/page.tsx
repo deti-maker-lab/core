@@ -487,6 +487,10 @@ export default function ProjectDetailPage() {
     })();
   }, [projectId]);
 
+  useEffect(() => {
+    requisitionsApi.syncSnipeit().catch(console.error);
+  }, []);
+
   if (loading) return (
     <main className="p-6 bg-[#f4f5f7] min-h-screen font-sans">
       <Header />

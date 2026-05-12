@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { Search, Plus, Cpu } from "lucide-react";
 import Link from "next/link";
-import { projects as projectsApi, requisitions as reqApi, equipment as equipmentApi, auth } from "@/lib/api";
+import { projects as projectsApi, requisitions as reqApi, equipment as equipmentApi, auth, requisitions as requisitionsApi } from "@/lib/api";
 import type { Project, Requisition, User } from "@/lib/api";
 import Header from "@/app/components/header";
 import { useTranslation } from "react-i18next";
@@ -56,6 +56,10 @@ export default function MyProjectsPage() {
         setLoading(false);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    requisitionsApi.syncSnipeit().catch(console.error);
   }, []);
 
   const filtered = myProjects.filter((proj) => {

@@ -94,7 +94,7 @@ export default function StatisticsPage() {
   const maxMonth = Math.max(...projectsPerMonth.map((m) => m.count), 1);
 
   if (loading) return (
-    <div className="flex-1 bg-gray-50 flex items-center justify-center min-h-screen">
+    <div className="flex-1 p-8 bg-[#f4f5f7] min-h-screen font-sans text-gray-900">
         <div className="text-gray-400 font-medium animate-pulse flex flex-col items-center gap-3">
             <BarChart2 size={32} className="animate-bounce text-blue-400" />
             {t("statistics.loading")}

@@ -1,6 +1,6 @@
 // apps/web/src/lib/api.ts
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://deti-makerlab.ua.pt/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://deti-makerlab.ua.pt/new/api";
 
 function getToken(): string | null {
   if (typeof window === "undefined") return null;

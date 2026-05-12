@@ -28,7 +28,7 @@ export default function Sidebar() {
     setIsMobileOpen(false);
   }, [pathname]);
 
-  if (pathname.startsWith("/auth")) return null;
+  if (pathname.startsWith("/new/auth")) return null;
 
   const menuItems = [
     { name: t("sidebar.dashboard"),  href: "/",           icon: <LayoutDashboard size={20} /> },
@@ -51,7 +51,7 @@ export default function Sidebar() {
         href="/"
         className={`flex items-center h-16 shrink-0 mb-2 ${collapsed ? "justify-center px-4" : "px-5 gap-3"}`}
       >
-        <img src="/deti-maker-lab.png" alt="DETI MakerLab" className="w-9 h-9 object-contain shrink-0" />
+        <img src="/new/deti-maker-lab.png" alt="DETI MakerLab" className="w-9 h-9 object-contain shrink-0" />
         {!collapsed && (
           <span className="font-bold text-base text-indigo-600 truncate">DETI Maker Lab</span>
         )}
@@ -100,7 +100,7 @@ export default function Sidebar() {
           {!collapsed && <span>{t("sidebar.technicianPortal")}</span>}
         </Link>
         <a
-          href="https://inventory.deti-makerlab.ua.pt"
+          href="https://deti-makerlab.ua.pt/new/snipe-it"
           target="_blank"
           rel="noopener noreferrer"
           className={`flex items-center rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-900 transition-all ${
@@ -119,31 +119,6 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-3 border-t border-gray-100 flex flex-col gap-1.5 shrink-0">
-        <div className={`flex items-center rounded-xl border border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors ${
-          collapsed ? "justify-center py-2.5" : "px-3 py-2"
-        }`}>
-          {collapsed ? (
-            <button
-              onClick={() => i18n.changeLanguage(i18n.language?.startsWith("en") ? "pt" : "en")}
-              className="text-gray-500 font-bold text-xs uppercase"
-              title={t("common.language")}
-            >
-              {(i18n.language || "en").substring(0, 2)}
-            </button>
-          ) : (
-            <div className="flex items-center gap-2 w-full">
-              <Globe size={15} className="text-gray-400 shrink-0" />
-              <select
-                className="bg-transparent text-sm font-medium text-gray-600 outline-none w-full cursor-pointer"
-                value={(i18n.language || "en").substring(0, 2)}
-                onChange={(e) => i18n.changeLanguage(e.target.value)}
-              >
-                <option value="en">{t("common.en")}</option>
-                <option value="pt">{t("common.pt")}</option>
-              </select>
-            </div>
-          )}
-        </div>
 
         {isLoggedIn && (
           <button
@@ -173,7 +148,7 @@ export default function Sidebar() {
     <>
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-14 bg-white border-b border-gray-100">
         <Link href="/" className="flex items-center gap-2">
-          <img src="/deti-maker-lab.png" alt="DETI MakerLab" className="w-8 h-8 object-contain" />
+          <img src="/new/deti-maker-lab.png" alt="DETI MakerLab" className="w-8 h-8 object-contain" />
           <span className="font-bold text-sm text-indigo-600">DETI Maker Lab</span>
         </Link>
         <button

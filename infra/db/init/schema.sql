@@ -122,16 +122,18 @@ CREATE TABLE equipment_request (
     id BIGSERIAL PRIMARY KEY,
     project_id BIGINT NOT NULL,
     requested_by BIGINT NOT NULL,
+    snipeit_asset_id BIGINT,
     status VARCHAR(50) NOT NULL DEFAULT 'pending',
     rejection_reason TEXT,
     approved_at TIMESTAMP,
+    checked_out_at TIMESTAMP,
+    returned_at TIMESTAMP,
+    expected_checkin TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_equipment_request_project
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     CONSTRAINT fk_equipment_request_user
-        FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE RESTRICT,
-    CONSTRAINT chk_equipment_request_status
-        CHECK (status IN ('pending', 'reserved', 'rejected', 'partially_fulfilled', 'fulfilled', 'cancelled'))
+        FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE RESTRICT
 );
 
 -- =========================================================
