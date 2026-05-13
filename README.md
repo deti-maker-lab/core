@@ -1,8 +1,6 @@
 # DETI Maker Lab — Development Setup Guide
 
->To be reviewed, might not be consistent in 100% with actual steps.
-
-This document explains how to set up the local development environment, run the project, and stop everything at the end of the day.
+> This guide explains how to set up the local development environment, run the project, and stop everything at the end of the day.
 
 > Recommended setup for Windows contributors: **Windows + WSL2 (Ubuntu) + Docker Desktop + VS Code + Android Studio**.
 >
@@ -23,7 +21,7 @@ The core goals are:
 - integrate authentication with the university **SSO / universal user**,
 - support both **web** and **mobile** clients.
 
-### Proposed monorepo structure
+### Monorepo structure
 
 ```text
 .
@@ -32,19 +30,12 @@ The core goals are:
 │   ├── mobile/       # Expo / React Native mobile app
 │   ├── api/          # FastAPI backend
 │   └── migration/    # legacy wiki import / migration scripts
-├── packages/
-│   ├── shared-types/ # TS shared contracts for web/mobile
-│   ├── ui/           # shared UI components
-│   ├── config/       # shared configuration helpers
-│   ├── auth/         # auth helpers for OIDC / SSO integration
-│   ├── snipeit-client/
-│   └── legacy-wiki/
 ├── infra/
-│   ├── docker/
-│   ├── db/
-│   ├── nginx/
-│   └── scripts/
-├── docs/
+│   ├── docker/       # Docker Compose setup
+│   ├── db/           # Database initialization scripts
+│   ├── nginx/        # Nginx configuration
+│   └── snipeit/      # Snipe-IT environment config
+├── docs/             # Documentation
 └── README.md
 ```
 
@@ -66,8 +57,7 @@ The core goals are:
 ### Backend
 - **FastAPI** for the backend API
 - **Python 3.12** with **pip** and **venv**
-- **SQLAlchemy** for ORM / DB access
-- **Alembic** for database migrations
+- **SQLModel** / **SQLAlchemy** for ORM / DB access
 - **Pydantic** for validation and schemas
 
 ### Database and infra
@@ -77,7 +67,7 @@ The core goals are:
 
 ### Integrations
 - **Snipe-IT** as the inventory authority
-- University **SSO / OIDC** as the preferred authentication path
+- University **SSO** as the preferred authentication path
 - Legacy **Maker Lab Wiki** as a migration source
 
 ### Developer workflow
@@ -258,64 +248,54 @@ code .
 
 ---
 
-## 6. Expected starter project structure
-
-The project is expected to look approximately like this:
-
-```text
-apps/
-  web/
-  mobile/
-  api/
-  migration/
-packages/
-  shared-types/
-  ui/
-  config/
-  auth/
-  snipeit-client/
-  legacy-wiki/
-infra/
-  docker/
-  db/
-  nginx/
-```
-
----
-
-## 7. Environment variables
+## 6. Environment variables
 
 Create the local environment files from the examples provided in the repo.
 
 Typical files:
 
 ```text
-.env.example
-apps/web/.env.local
+infra/db/.env.postgres
+infra/snipeit/.env.snipeit
 apps/api/.env
-apps/mobile/.env
+apps/migration/.env
 ```
 
-Typical values:
+To initialize your PostgreSQL environment file, copy the example:
+
+```bash
+cp infra/db/.env.postgres.example infra/db/.env.postgres
+```
+
+For the backend API, copy the example:
+
+```bash
+cp apps/api/.env.example apps/api/.env
+```
+
+Ensure the values in `.env` match your local setup. For example, `apps/api/.env` might look like:
 
 ```env
-DATABASE_URL=postgresql://makerlab:makerlab@localhost:5432/makerlab
-NEXT_PUBLIC_API_URL=http://localhost:8000
-EXPO_PUBLIC_API_URL=http://localhost:8000
+DATABASE_URL=postgresql+psycopg://makerlab_app:CHANGE_ME_STRONG_PASSWORD@localhost:5432/makerlab
 
-SNIPEIT_BASE_URL=
-SNIPEIT_API_TOKEN=
+SNIPEIT_BASE_URL=http://snipeit
+SNIPEIT_API_TOKEN=YOUR_SNIPEIT_API_TOKEN
 
-OIDC_ISSUER=
-OIDC_CLIENT_ID=
-OIDC_CLIENT_SECRET=
+SSO_CALLBACK_URL=https://deti-makerlab.ua.pt/auth/auth
+
+DML_AUTH_KEY=your_client_key_here
+DML_AUTH_SECRET=your_client_secret_here
+
+JWT_SECRET_KEY=supersecretkey
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=60
 ```
 
 At the beginning of development, SSO and Snipe-IT values may be left empty if the repo contains mock adapters or local-only configuration.
 
 ---
 
-## 8. Install project dependencies
+## 7. Install project dependencies
 
 ### JavaScript / TypeScript workspace
 
@@ -327,36 +307,38 @@ pnpm install
 
 ### Python backend
 
-From the backend directory:
+From the backend directory, you need to create the `venv` folder (because the `package.json` dev script expects it there):
 
 ```bash
 cd apps/api
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 cd ../..
 ```
 
-If the backend also has development-only dependencies, install them as well:
+If you are working on the migration script, you can do the same there:
 
 ```bash
-cd apps/api
-source .venv/bin/activate
+cd apps/migration
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 cd ../..
 ```
 
-> Activate the virtual environment every time you open a new terminal for backend work.
+> The API's `dev` script uses `venv/bin/uvicorn`, so you do not explicitly need to activate the virtual environment to run it via Turborepo, but you must create the `venv` directory.
 
 ---
 
-## 9. Start local infrastructure
+## 8. Start local infrastructure
 
 The recommended local infrastructure is at least:
 
 - PostgreSQL
-- optional admin / support services later
+- Snipe-IT (optional but often used)
+- Nginx (optional, used for full routing simulation)
 
 From the repo root:
 
@@ -370,13 +352,15 @@ Check running containers:
 docker ps
 ```
 
+The database tables and seeds are automatically applied by the initialization scripts found in `infra/db/init/` when the Postgres container starts for the first time.
+
 ---
 
-## 10. Run the project locally
+## 9. Run the project locally
 
 ### Development mode (localhost URLs)
 
-For quick local development, run the backend and frontend separately:
+For quick local development, run the services separately or use Turbo.
 
 **Terminal 1 — web app**
 
@@ -390,23 +374,22 @@ Expected URL: `http://localhost:3000`
 **Terminal 2 — FastAPI backend**
 
 ```bash
-cd ~/dev/deti-maker-lab/apps/api
-source .venv/bin/activate
-fastapi dev app/main.py --host 0.0.0.0 --port 8000
+cd ~/dev/deti-maker-lab
+pnpm --filter api dev
 ```
 
 Expected URL: `http://localhost:8000`
-
 Swagger docs: `http://localhost:8000/docs`
 
 **Terminal 3 — mobile app**
 
 ```bash
 cd ~/dev/deti-maker-lab
-pnpm --filter mobile start
+pnpm --filter mobile dev
 ```
 
 Then press `a` for Android emulator, or scan the QR code in Expo Go.
+*(Note: Mobile defaults to port 3000. If `web` is also running, `web` might shift to port 3001 automatically).*
 
 ### Full stack mode (with Docker, nginx, and domain names)
 
@@ -418,7 +401,7 @@ To test the complete system as it runs in production with nginx reverse-proxying
 docker compose -f infra/docker/docker-compose.yml up -d
 ```
 
-2. Add domain names to your **Windows hosts file** (see [troubleshooting section](###-site-cant-be-reached--dns_probe_finished_nxdomain)):
+2. Add domain names to your **Windows hosts file** (see [troubleshooting section](#site-cant-be-reached--dns_probe_finished_nxdomain)):
 
 ```
 127.0.0.1  deti-makerlab.ua.pt
@@ -433,39 +416,35 @@ docker compose -f infra/docker/docker-compose.yml up -d
 
 ---
 
-### Parallel run of backend and frontend
+### Parallel run of backend and mobile
 
-Alternatively, from the repo root:
+Alternatively, from the repo root, run:
 
 ```bash
 pnpm dev
 ```
 
-This starts both services in parallel (if configured in `turbo.json`).
+This starts both the API and the mobile app in parallel (as configured in `turbo.json`).
 
 ---
 
-## 11. Database migrations
+## 10. Database initialization
 
-If the backend uses Alembic, typical commands are:
+Database tables are managed directly by SQLModel. 
 
-```bash
-cd ~/dev/deti-maker-lab/apps/api
-source .venv/bin/activate
-alembic upgrade head
-```
+When you spin up the Docker Compose stack, initialization files in `infra/db/init/` (`schema.sql` and `seed.sql`) are automatically applied.
 
-To create a new migration:
+If you ever need to reset the database entirely, you can remove the volume and restart Docker:
 
 ```bash
-cd ~/dev/deti-maker-lab/apps/api
-source .venv/bin/activate
-alembic revision --autogenerate -m "describe_change"
+docker compose -f infra/docker/docker-compose.yml down -v
+docker compose -f infra/docker/docker-compose.yml up -d
 ```
+*(Warning: this will delete all local test data).*
 
 ---
 
-## 12. Daily workflow on Windows
+## 11. Daily workflow on Windows
 
 This is the recommended day-to-day workflow for contributors using Windows.
 
@@ -494,28 +473,22 @@ code .
 6. Start infrastructure:
 
 ```bash
-docker compose -f infra/docker/docker-compose.yml up -d
+docker compose -f infra/docker/docker-compose.yml up -d postgres
 ```
 
 7. Refresh dependencies only when needed:
 
 ```bash
 pnpm install
-cd apps/api && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && cd ../..
+cd apps/api && source venv/bin/activate && pip install -r requirements.txt && cd ../..
 ```
 
 8. Start the apps you need:
 
 ```bash
 pnpm --filter web dev
-```
-
-```bash
-cd apps/api && source .venv/bin/activate && fastapi dev app/main.py --host 0.0.0.0 --port 8000
-```
-
-```bash
-pnpm --filter mobile start
+pnpm --filter api dev
+pnpm --filter mobile dev
 ```
 
 ### Typical daily routine
@@ -527,11 +500,11 @@ pnpm --filter mobile start
 
 ---
 
-## 13. How to stop everything after work
+## 12. How to stop everything after work
 
 This section is important. At the end of the day, shut down local processes so they do not keep using CPU, RAM, battery, or disk resources.
 
-### 13.1 Stop application dev servers
+### 12.1 Stop application dev servers
 
 In each terminal running a dev server, press:
 
@@ -542,14 +515,14 @@ Ctrl + C
 Do this for:
 
 - `pnpm --filter web dev`
-- `fastapi dev ...`
-- `pnpm --filter mobile start`
+- `pnpm --filter api dev`
+- `pnpm --filter mobile dev`
 
 If you launched the Android emulator, close it from Android Studio or the emulator window.
 
 ---
 
-### 13.2 Stop Docker containers
+### 12.2 Stop Docker containers
 
 From the repo root:
 
@@ -569,19 +542,7 @@ docker compose -f infra/docker/docker-compose.yml stop
 
 ---
 
-### 13.3 Deactivate the Python virtual environment
-
-If your terminal is still inside the backend venv, run:
-
-```bash
-deactivate
-```
-
-This is optional, but it keeps the shell state clean.
-
----
-
-### 13.4 Optional: stop WSL completely
+### 12.3 Optional: stop WSL completely
 
 After all WSL terminals are closed, you can shut down WSL from Windows PowerShell:
 
@@ -593,7 +554,7 @@ This frees memory used by the Linux VM.
 
 ---
 
-### 13.5 Optional: quit Docker Desktop
+### 12.4 Optional: quit Docker Desktop
 
 If you are completely done for the day, you can also quit Docker Desktop from the Windows tray icon.
 
@@ -601,25 +562,26 @@ This is useful when you are not doing any more container work.
 
 ---
 
-## 14. Useful commands reference
+## 13. Useful commands reference
 
 ### Repo root
 
 ```bash
 pnpm install
 pnpm --filter web dev
-pnpm --filter mobile start
+pnpm --filter api dev
+pnpm --filter mobile dev
 ```
 
 ### Backend
 
 ```bash
 cd apps/api
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
-fastapi dev app/main.py --host 0.0.0.0 --port 8000
-alembic upgrade head
+cd ../..
+pnpm --filter api dev
 ```
 
 ### Docker
@@ -641,21 +603,21 @@ wsl --shutdown
 
 ---
 
-## 15. Recommended team rules
+## 14. Recommended team rules
 
 To keep the environment predictable for everyone:
 
 - always develop from **WSL**, not from `C:\...`
 - commit lockfiles: `pnpm-lock.yaml`
 - do not commit `.env` files with secrets
-- do not commit `.venv/`
+- do not commit `venv/`
 - avoid changing tool versions casually
 - when upgrading Node / pnpm / Python / Expo / FastAPI, announce it in the team chat and update this document
 - stop Docker containers and dev servers after work
 
 ---
 
-## 16. Troubleshooting
+## 15. Troubleshooting
 
 ### Site can't be reached — `DNS_PROBE_FINISHED_NXDOMAIN`
 
@@ -709,21 +671,14 @@ corepack prepare pnpm@latest-10 --activate
 
 ```bash
 cd apps/api
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-### `fastapi: command not found`
-- The virtual environment is probably not active, or FastAPI is not installed.
-- Run:
-
-```bash
-cd apps/api
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+### `uvicorn` or FastAPI command not found
+- The virtual environment is probably not initialized or the API filter is not picking it up. Ensure `venv` is in the `apps/api` folder since the `dev` script uses `./venv/bin/uvicorn`.
 
 ### Expo cannot find Android emulator
 - Open Android Studio first
@@ -732,14 +687,14 @@ pip install -r requirements.txt
 
 ### Ports are already in use
 - Check what is running on:
-  - `3000` for web
+  - `3000` for web and mobile
   - `8000` for API
   - `5432` for PostgreSQL
 - Stop the conflicting process or change the local port
 
 ---
 
-## 17. Final note
+## 16. Final note
 
 This guide is the baseline for local development. As the repository evolves, update this file whenever:
 
