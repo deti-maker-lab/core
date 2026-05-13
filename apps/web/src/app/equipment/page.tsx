@@ -74,7 +74,7 @@ export default function EquipmentPage() {
   }, []);
 
   const dynamicCategories = useMemo(() => {
-    const cats = new Set(equipment.map(item => item.category).filter(Boolean));
+    const cats = new Set(equipment.map(item => item.category).filter((c): c is string => Boolean(c)));
     return ["All Categories", ...Array.from(cats).sort()];
   }, [equipment]);
 

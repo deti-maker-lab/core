@@ -1,10 +1,10 @@
 "use client";
 
 // apps/web/src/app/auth/callback/page.tsx
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function AuthCallback() {
+function AuthCallbackInner() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -19,7 +19,15 @@ export default function AuthCallback() {
 
     const safeUrl = returnUrl.startsWith("/new") ? returnUrl : "/new" + returnUrl;
     window.location.replace(safeUrl);
-  }, []);
+  }, [searchParams]);
 
   return <p>Authenticating...</p>;
+}
+
+export default function AuthCallback() {
+  return (
+    <Suspense fallback={<p>Loading...</p>}>
+      <AuthCallbackInner />
+    </Suspense>
+  );
 }
