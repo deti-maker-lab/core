@@ -2,7 +2,7 @@
 
 > This guide explains how to set up the local development environment, run the project, and stop everything at the end of the day.
 
-> Recommended setup for Windows contributors: **Windows + WSL2 (Ubuntu) + Docker Desktop + VS Code + Android Studio**.
+> Recommended setup for Windows contributors: **Windows + WSL2 (Ubuntu) + Docker Desktop + VS Code**.
 >
 > We keep the repository inside the **WSL filesystem** and run the backend/web/tooling from Linux. This gives a smoother developer experience than mixing native Windows tooling with Linux-oriented project scripts.
 
