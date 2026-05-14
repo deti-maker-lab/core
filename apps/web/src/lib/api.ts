@@ -18,6 +18,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
 
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      document.cookie = "token=; path=/; max-age=0";
+      window.location.reload();
+    }
     const error = await res.json().catch(() => ({ detail: "Unknown error" }));
     throw new Error(error.detail ?? "Request failed");
   }

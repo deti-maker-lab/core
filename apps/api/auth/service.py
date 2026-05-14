@@ -10,6 +10,7 @@ from urllib3.poolmanager import PoolManager
 from db.models import User
 from db.database import get_session
 from dotenv import load_dotenv
+from datetime import datetime, timedelta, timezone
 
 load_dotenv()
 
@@ -135,7 +136,8 @@ def get_or_create_user(user_data: dict):
         db.close()
 
 def create_jwt_for_user(user: User) -> str:
-    payload = {"sub": user.email}
+    expire = datetime.now(timezone.utc) + timedelta(days=7)
+    payload = {"sub": user.email, "exp": expire}
     return jwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
 def is_mobile_login(oauth_token: str) -> bool:
