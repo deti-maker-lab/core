@@ -6,10 +6,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Folder, Cpu, Users, BarChart3,
-  BookText, Wrench, Menu, X, LogOut, Package,
+  BookText, Wrench, Menu, X, Package,
   ExternalLink, Globe, ChevronLeft, ChevronRight,
 } from "lucide-react";
-import { auth } from "@/lib/api";
 import { useTranslation } from "react-i18next";
 
 export default function Sidebar() {
@@ -17,12 +16,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const overlayRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    auth.me().then(() => setIsLoggedIn(true)).catch(() => setIsLoggedIn(false));
-  }, []);
 
   useEffect(() => {
     setIsMobileOpen(false);
@@ -38,12 +32,6 @@ export default function Sidebar() {
     { name: t("sidebar.statistics"), href: "/statistics", icon: <BarChart3 size={20} /> },
     { name: t("sidebar.ledger"),     href: "/ledger",     icon: <BookText size={20} /> },
   ];
-
-  function handleLogout() {
-    localStorage.removeItem("token");
-    document.cookie = "token=; path=/; max-age=0";
-    window.location.reload();
-  }
 
   const NavContent = ({ collapsed }: { collapsed: boolean }) => (
     <>
@@ -119,19 +107,6 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-3 border-t border-gray-100 flex flex-col gap-1.5 shrink-0">
-
-        {isLoggedIn && (
-          <button
-            onClick={handleLogout}
-            className={`flex items-center rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-all ${
-              collapsed ? "justify-center py-2.5" : "gap-3 px-3 py-2.5"
-            }`}
-            title={collapsed ? t("sidebar.logout") : ""}
-          >
-            <LogOut size={18} className="shrink-0" />
-            {!collapsed && <span>{t("sidebar.logout")}</span>}
-          </button>
-        )}
 
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}

@@ -2,7 +2,7 @@
 
 // apps/web/src/app/components/header.tsx
 import { useEffect, useState, useRef } from "react";
-import { Bell, UserCircle, Check, Globe } from "lucide-react";
+import { Bell, UserCircle, Check, Globe, LogOut, ChevronDown } from "lucide-react";
 import { auth, notifications as notificationsApi, equipment as equipmentApi } from "@/lib/api";
 import type { User, Notification } from "@/lib/api";
 import { useTranslation } from "react-i18next";
@@ -14,9 +14,11 @@ export default function Header() {
   const [notifs, setNotifs]     = useState<Notification[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [langOpen, setLangOpen]   = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [assetNames, setAssetNames] = useState<Record<number, string>>({});
   const notifRef = useRef<HTMLDivElement>(null);
   const langRef  = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     auth.me()
@@ -62,10 +64,17 @@ export default function Header() {
     function handleClick(e: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
       if (langRef.current  && !langRef.current.contains(e.target as Node))  setLangOpen(false);
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) setUserMenuOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  function handleLogout() {
+    localStorage.removeItem("token");
+    document.cookie = "token=; path=/; max-age=0";
+    window.location.reload();
+  }
 
   async function markRead(id: number) {
     await notificationsApi.markRead(id).catch(() => {});
@@ -216,13 +225,39 @@ export default function Header() {
           </div>
 
           {/* User avatar */}
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl">
-            <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xs">
-              {user.name.charAt(0).toUpperCase()}
-            </div>
-            <span className="text-sm font-semibold text-gray-700 hidden sm:block max-w-[120px] truncate">
-              {user.name.split(" ")[0]}
-            </span>
+          <div className="relative" ref={userMenuRef}>
+            <button
+              onClick={() => setUserMenuOpen((v) => !v)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
+                userMenuOpen ? "bg-gray-100" : "hover:bg-gray-50"
+              }`}
+            >
+              <div className="w-7 h-7 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold text-xs">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+              <span className="text-sm font-semibold text-gray-700 hidden sm:block max-w-[120px] truncate">
+                {user.name.split(" ")[0]}
+              </span>
+              <ChevronDown size={14} className="text-gray-400 hidden sm:block" />
+            </button>
+
+            {userMenuOpen && (
+              <div className="absolute right-0 top-12 w-56 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden py-1">
+                <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                  <p className="text-sm font-bold text-gray-900 truncate">{user.name}</p>
+                  {user.email && <p className="text-xs text-gray-500 truncate">{user.email}</p>}
+                </div>
+                <div className="py-1">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut size={16} />
+                    {t("header.logout")}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </>
       ) : (
