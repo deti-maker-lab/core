@@ -125,6 +125,22 @@ def parse_equipment_markdown(content: str) -> Dict[str, Any]:
                         result[field] = Decimal(value)
                     except:
                         pass
+                elif field == "location":
+                    # Clean location: take only first line, remove wiki markup, truncate to 150 chars
+                    # Remove common wiki markup patterns
+                    value = re.sub(r'\r?\n#.*$', '', value, flags=re.MULTILINE)  # Remove headers
+                    value = re.sub(r'\[image:.*?\]', '', value)  # Remove image tags
+                    value = re.sub(r'</?[a-z]+>', '', value)  # Remove XML/HTML tags
+                    value = re.sub(r'<type>.*</type>', '', value)  # Remove type tags
+                    value = re.sub(r'<quantity>.*</quantity>', '', value)  # Remove quantity tags
+                    value = re.sub(r'<active_requisitions>.*</active_requisitions>', '', value)  # Remove requisition tags
+                    value = re.sub(r'<requisitions />', '', value)  # Remove requisition tags
+                    value = re.sub(r'</wiki>', '', value)  # Remove wiki closing tag
+                    value = value.strip()
+                    # Truncate to 140 chars (safety margin for VARCHAR(150))
+                    if len(value) > 140:
+                        value = value[:140]
+                    result[field] = value
                 else:
                     result[field] = value
     
