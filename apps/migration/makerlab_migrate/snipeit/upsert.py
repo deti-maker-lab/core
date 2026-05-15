@@ -138,7 +138,10 @@ def create_asset(
         return SnipeITAsset(
             id=response["id"],
             asset_tag=asset_tag,
-            name=name
+            name=name,
+            last_checkout=None,
+            last_checkin=None,
+            expected_checkin=None
         )
     
     return None

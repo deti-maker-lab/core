@@ -158,7 +158,8 @@ class MigrationOrchestrator:
                             self.stats["users"]["errors"] += 1
 
         # Phase 2: Postgres upserts (in single transaction)
-        with PostgresUnitOfWork(self.settings.postgres_uri, self.dry_run) as session:
+        # Note: Users are NOT rolled back in dry-run mode since they're needed as foreign key references
+        with PostgresUnitOfWork(self.settings.postgres_uri, False) as session:
             batch_size = self.settings.batch_size
             for i in range(0, len(users), batch_size):
                 batch = users[i:i + batch_size]
