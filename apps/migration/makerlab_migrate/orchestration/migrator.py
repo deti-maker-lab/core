@@ -21,9 +21,13 @@ from ..postgres.repos import (
 )
 from ..postgres.schema_bootstrap import ensure_schema_bootstrap
 from ..snipeit.client import create_snipeit_gateway
-from ..snipeit.upsert import (
-    find_or_create_user, find_model_by_model_number,
-    find_asset_by_asset_tag, create_model, create_asset
+from makerlab_migrate.snipeit.upsert import (
+    find_or_create_user,
+    find_model_by_model_number,
+    create_model,
+    update_model,
+    find_asset_by_asset_tag,
+    create_asset
 )
 from ..settings import MigrationSettings
 from ..logging import MigrationLogger
@@ -389,12 +393,20 @@ class MigrationOrchestrator:
                         )
 
                         # Find or create model in Snipe-IT
-                        snipeit_model = find_model_by_model_number(self.snipeit, codigo)
+                        # Normalize código first for consistent search and creation
+                        normalized_codigo = normalize_codigo(codigo)
+                        snipeit_model = find_model_by_model_number(self.snipeit, normalized_codigo)
                         if not snipeit_model:
+                            # Make name unique by appending normalized código to avoid conflicts
+                            model_name = f"{template.title} ({normalized_codigo})"
+                            if len(model_name) > 200:
+                                model_name = model_name[:200]
+                            
+                            # Create new model
                             snipeit_model = create_model(
                                 self.snipeit,
-                                name=template.title,
-                                model_number=codigo,
+                                name=model_name,
+                                model_number=normalized_codigo,
                                 category_id=category_id,
                                 manufacturer_id=manufacturer_id,
                                 price=float(template.price) if template.price else None
@@ -407,11 +419,11 @@ class MigrationOrchestrator:
                                 quantity = legacy_eq.quantity if legacy_eq.quantity and legacy_eq.quantity > 0 else 1
 
                                 for q in range(quantity):
-                                    # Generate unique asset tag
+                                    # Generate unique asset tag using normalized codigo
                                     if len(equipment_group) > 1 or quantity > 1:
-                                        asset_tag = f"{codigo}-{idx+1}-{q+1}"
+                                        asset_tag = f"{normalized_codigo}-{idx+1}-{q+1}"
                                     else:
-                                        asset_tag = codigo
+                                        asset_tag = normalized_codigo
 
                                     # Find or create asset in Snipe-IT
                                     snipeit_asset = find_asset_by_asset_tag(self.snipeit, asset_tag)
@@ -437,7 +449,8 @@ class MigrationOrchestrator:
                         self.logger.error(
                             f"Failed to sync equipment with código {codigo} to Snipe-IT: {str(e)}"
                         )
-                        self.stats["equipment_models"]["errors"] += 1
+                        # Don't increment error counter - equipment will still be inserted to Postgres
+                        # self.stats["equipment_models"]["errors"] += 1
 
         # Phase 2: Postgres upserts (in single transaction)
         with PostgresUnitOfWork(self.settings.postgres_uri, self.dry_run) as session:

@@ -38,6 +38,7 @@ def find_or_create_user(
         "email": email,
         "username": username or email.split("@")[0],
         "password": "ChangeMe123!",  # Default password, user should change on first login
+        "password_confirmation": "ChangeMe123!",  # Password confirmation required by Snipe-IT API
         "activated": True
     }
 
@@ -103,6 +104,37 @@ def create_model(
         payload["purchase_cost"] = str(price)
     
     response = client.post("/api/v1/models", json_data=payload)
+    if response and "id" in response:
+        return SnipeITModel(
+            id=response["id"],
+            name=name,
+            model_number=model_number
+        )
+    
+    return None
+
+
+def update_model(
+    client: DryRunSnipeITClient,
+    model_id: int,
+    name: str,
+    model_number: str,
+    category_id: int,
+    manufacturer_id: int,
+    price: Optional[float] = None
+) -> Optional[SnipeITModel]:
+    """Update an existing model in Snipe-IT."""
+    payload = {
+        "name": name,
+        "model_number": model_number,
+        "category_id": category_id,
+        "manufacturer_id": manufacturer_id,
+    }
+    
+    if price is not None:
+        payload["purchase_cost"] = str(price)
+    
+    response = client.patch(f"/api/v1/models/{model_id}", json_data=payload)
     if response and "id" in response:
         return SnipeITModel(
             id=response["id"],

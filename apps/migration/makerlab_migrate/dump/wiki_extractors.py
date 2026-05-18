@@ -166,7 +166,11 @@ def normalize_codigo(codigo: str) -> str:
     """Normalize código by removing spaces and special characters."""
     if not codigo:
         return ""
-    return re.sub(r'[\s\-_]', '', codigo.strip()).upper()
+    # First remove literal \r\n sequences (common in markdown)
+    normalized = codigo.replace('\\r\\n', '').replace('\\n', '').replace('\\r', '')
+    # Then remove whitespace, hyphens, and underscores
+    normalized = re.sub(r'[\s\-_]', '', normalized.strip())
+    return normalized.upper()
 
 
 def extract_nmec_from_username(username: str) -> Optional[str]:
