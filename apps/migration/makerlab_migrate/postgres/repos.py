@@ -164,7 +164,8 @@ def upsert_equipment_model(
     family: Optional[str] = None,
     sub_family: Optional[str] = None,
     supplier: Optional[str] = None,
-    price: Optional[float] = None
+    price: Optional[float] = None,
+    snipeit_model_id: Optional[int] = None
 ) -> tuple[EquipmentModel, str]:
     """
     Upsert an equipment model by legacy_id.
@@ -190,6 +191,9 @@ def upsert_equipment_model(
             model.supplier = supplier
         if price is not None:
             model.price = price
+        # Only update snipeit_model_id if it's not already set (to avoid unique constraint violations)
+        if snipeit_model_id is not None and model.snipeit_model_id is None:
+            model.snipeit_model_id = snipeit_model_id
         return model, "UPDATE"
     
     # Insert new model
@@ -201,7 +205,8 @@ def upsert_equipment_model(
         family=family,
         sub_family=sub_family,
         supplier=supplier,
-        price=price
+        price=price,
+        snipeit_model_id=snipeit_model_id
     )
     session.add(model)
     session.flush()  # Flush to get the generated ID
@@ -228,7 +233,8 @@ def upsert_equipment(
     if equipment:
         # Update existing equipment
         equipment.model_id = model_id
-        if snipeit_asset_id is not None:
+        # Only update snipeit_asset_id if it's not already set (to avoid unique constraint violations)
+        if snipeit_asset_id is not None and equipment.snipeit_asset_id is None:
             equipment.snipeit_asset_id = snipeit_asset_id
         if location is not None:
             equipment.location = location
