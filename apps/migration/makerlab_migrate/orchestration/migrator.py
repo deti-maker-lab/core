@@ -27,7 +27,11 @@ from makerlab_migrate.snipeit.upsert import (
     create_model,
     update_model,
     find_asset_by_asset_tag,
-    create_asset
+    create_asset,
+    update_asset,
+    find_or_create_category,
+    find_or_create_manufacturer,
+    cleanup_categories_and_manufacturers
 )
 from ..settings import MigrationSettings
 from ..logging import MigrationLogger
@@ -373,6 +377,10 @@ class MigrationOrchestrator:
         # Collect Snipe-IT model and asset IDs for each codigo and equipment item
         snipeit_data: Dict[str, Dict] = {}  # codigo -> {model_id, assets: {article_id -> asset_id}}
         if not self.skip_snipeit:
+            # Clean up existing categories and manufacturers to ensure clean migration
+            self.logger.info("Cleaning up existing categories and manufacturers...")
+            cleanup_categories_and_manufacturers(self.snipeit)
+            
             self.logger.info("Syncing equipment models and assets to Snipe-IT...")
             codigos_list = list(equipment_by_codigo.items())
             batch_size = self.settings.batch_size
@@ -382,15 +390,30 @@ class MigrationOrchestrator:
                     try:
                         template = equipment_group[0]
 
-                        # Get category and manufacturer IDs from settings
-                        category_id = self.settings.snipeit_category_map.get(
-                            template.family,
-                            self.settings.snipeit_default_category_id
+                        # Dynamically find or create category and manufacturer
+                        category_id = find_or_create_category(
+                            self.snipeit,
+                            template.family if template.family else "Uncategorized"
                         )
-                        manufacturer_id = self.settings.snipeit_manufacturer_map.get(
-                            template.supplier,
-                            self.settings.snipeit_default_manufacturer_id
+                        manufacturer_id = find_or_create_manufacturer(
+                            self.snipeit,
+                            template.supplier if template.supplier else "Unknown"
                         )
+                        
+                        # If category or manufacturer creation failed, skip this equipment
+                        if not category_id:
+                            self.logger.error(
+                                f"Failed to create or find category for family '{template.family}'"
+                            )
+                            self.stats["equipment_models"]["errors"] += 1
+                            continue
+                        
+                        if not manufacturer_id:
+                            self.logger.error(
+                                f"Failed to create or find manufacturer for supplier '{template.supplier}'"
+                            )
+                            self.stats["equipment_models"]["errors"] += 1
+                            continue
 
                         # Find or create model in Snipe-IT
                         # Normalize código first for consistent search and creation
@@ -427,13 +450,32 @@ class MigrationOrchestrator:
 
                                     # Find or create asset in Snipe-IT
                                     snipeit_asset = find_asset_by_asset_tag(self.snipeit, asset_tag)
+                                    
+                                    # Normalize location (strip \r\n* like we do for category names)
+                                    normalized_location = None
+                                    if legacy_eq.location:
+                                        normalized_location = legacy_eq.location.strip().strip('\r\n').strip().rstrip('-*').strip().replace('\r', '').replace('\n', '').replace('\\r', '').replace('\\n', '')
+                                        if not normalized_location:
+                                            normalized_location = None
+                                    
+                                    asset_price = float(template.price) if template.price else None
+                                    
                                     if not snipeit_asset:
                                         snipeit_asset = create_asset(
                                             self.snipeit,
                                             model_id=snipeit_model.id,
                                             asset_tag=asset_tag,
                                             name=legacy_eq.title,
-                                            location=legacy_eq.location
+                                            location=normalized_location,
+                                            price=asset_price
+                                        )
+                                    else:
+                                        # Update existing asset with price and location
+                                        update_asset(
+                                            self.snipeit,
+                                            snipeit_asset.id,
+                                            location=normalized_location,
+                                            price=asset_price
                                         )
 
                                     if snipeit_asset:
@@ -449,8 +491,7 @@ class MigrationOrchestrator:
                         self.logger.error(
                             f"Failed to sync equipment with código {codigo} to Snipe-IT: {str(e)}"
                         )
-                        # Don't increment error counter - equipment will still be inserted to Postgres
-                        # self.stats["equipment_models"]["errors"] += 1
+                        self.stats["equipment_models"]["errors"] += 1
 
         # Phase 2: Postgres upserts (in single transaction)
         with PostgresUnitOfWork(self.settings.postgres_uri, self.dry_run) as session:
@@ -462,6 +503,14 @@ class MigrationOrchestrator:
                     try:
                         # Use first equipment as template
                         template = equipment_group[0]
+
+                        # Skip Postgres insertion if Snipe-IT sync failed (unless skip_snipeit is set)
+                        if not self.skip_snipeit and codigo not in snipeit_data:
+                            self.logger.warning(
+                                f"Skipping Postgres insertion for código {codigo} - Snipe-IT sync failed"
+                            )
+                            self.stats["equipment_models"]["skipped"] += 1
+                            continue
 
                         # Get Snipe-IT model ID if available
                         snipeit_model_id = None
@@ -479,12 +528,9 @@ class MigrationOrchestrator:
                             family=template.family,
                             sub_family=template.sub_family,
                             supplier=template.supplier,
-                            price=float(template.price) if template.price else None
+                            price=float(template.price) if template.price else None,
+                            snipeit_model_id=snipeit_model_id
                         )
-
-                        # Update with Snipe-IT model ID
-                        if snipeit_model_id:
-                            model.snipeit_model_id = snipeit_model_id
 
                         # Map action to stat key (past tense)
                         stat_key = {"INSERT": "inserted", "UPDATE": "updated"}.get(model_action, model_action.lower())
