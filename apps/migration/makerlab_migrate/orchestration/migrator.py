@@ -31,7 +31,9 @@ from makerlab_migrate.snipeit.upsert import (
     update_asset,
     find_or_create_category,
     find_or_create_manufacturer,
-    cleanup_categories_and_manufacturers
+    cleanup_categories_and_manufacturers,
+    normalize_category_name,
+    normalize_manufacturer_name
 )
 from ..settings import MigrationSettings
 from ..logging import MigrationLogger
@@ -358,7 +360,7 @@ class MigrationOrchestrator:
         if start_id:
             equipment_list = [eq for eq in equipment_list if eq.article_id > start_id]
 
-        # Group equipment by código
+        # Group equipment by normalized código (merges dirty codes like '462\r\n-' and '462')
         equipment_by_codigo: Dict[str, list[LegacyEquipment]] = defaultdict(list)
         skipped_empty_codigo = []
         
@@ -366,7 +368,8 @@ class MigrationOrchestrator:
             if not eq.codigo or not eq.codigo.strip():
                 skipped_empty_codigo.append(eq)
                 continue
-            equipment_by_codigo[eq.codigo].append(eq)
+            normalized = normalize_codigo(eq.codigo)
+            equipment_by_codigo[normalized].append(eq)
         
         if skipped_empty_codigo:
             self.logger.warning(
@@ -377,10 +380,6 @@ class MigrationOrchestrator:
         # Collect Snipe-IT model and asset IDs for each codigo and equipment item
         snipeit_data: Dict[str, Dict] = {}  # codigo -> {model_id, assets: {article_id -> asset_id}}
         if not self.skip_snipeit:
-            # Clean up existing categories and manufacturers to ensure clean migration
-            self.logger.info("Cleaning up existing categories and manufacturers...")
-            cleanup_categories_and_manufacturers(self.snipeit)
-            
             self.logger.info("Syncing equipment models and assets to Snipe-IT...")
             codigos_list = list(equipment_by_codigo.items())
             batch_size = self.settings.batch_size
@@ -391,13 +390,17 @@ class MigrationOrchestrator:
                         template = equipment_group[0]
 
                         # Dynamically find or create category and manufacturer
+                        # Normalize family and supplier to remove special characters like \r\n*
+                        normalized_family = normalize_category_name(template.family) if template.family else "Uncategorized"
+                        normalized_supplier = normalize_manufacturer_name(template.supplier) if template.supplier else "Unknown"
+                        
                         category_id = find_or_create_category(
                             self.snipeit,
-                            template.family if template.family else "Uncategorized"
+                            normalized_family
                         )
                         manufacturer_id = find_or_create_manufacturer(
                             self.snipeit,
-                            template.supplier if template.supplier else "Unknown"
+                            normalized_supplier
                         )
                         
                         # If category or manufacturer creation failed, skip this equipment
@@ -486,6 +489,12 @@ class MigrationOrchestrator:
                                 "model_id": snipeit_model.id,
                                 "assets": assets
                             }
+                        else:
+                            self.logger.error(
+                                f"Failed to find or create Snipe-IT model for código {codigo} "
+                                f"(model_number={normalized_codigo})"
+                            )
+                            self.stats["equipment_models"]["errors"] += 1
 
                     except Exception as e:
                         self.logger.error(

@@ -2,6 +2,7 @@
 
 import sys
 import os
+import unicodedata
 from typing import Optional, Dict, Any
 
 # Add the apps/api directory to the path to import mappers
@@ -57,12 +58,18 @@ def find_or_create_user(
 def find_model_by_model_number(client: DryRunSnipeITClient, model_number: str) -> Optional[SnipeITModel]:
     """Find a Snipe-IT model by model number."""
     try:
-        response = client.get("/api/v1/models", params={"search": model_number, "limit": 10})
+        response = client.get("/api/v1/models", params={"search": model_number, "limit": 50})
         
         if "rows" in response:
             for row in response["rows"]:
                 if row.get("model_number", "").lower() == model_number.lower():
-                    return SnipeITModel(**row)
+                    # Extract only the fields we need to avoid Pydantic validation errors
+                    # from unexpected extra fields in the API response
+                    return SnipeITModel(
+                        id=row["id"],
+                        name=row.get("name", ""),
+                        model_number=row.get("model_number")
+                    )
         
         return None
     except Exception:
@@ -72,12 +79,20 @@ def find_model_by_model_number(client: DryRunSnipeITClient, model_number: str) -
 def find_asset_by_asset_tag(client: DryRunSnipeITClient, asset_tag: str) -> Optional[SnipeITAsset]:
     """Find a Snipe-IT asset by asset tag."""
     try:
-        response = client.get("/api/v1/hardware", params={"search": asset_tag, "limit": 10})
+        response = client.get("/api/v1/hardware", params={"search": asset_tag, "limit": 50})
         
         if "rows" in response:
             for row in response["rows"]:
                 if row.get("asset_tag", "").lower() == asset_tag.lower():
-                    return SnipeITAsset(**row)
+                    # Extract only the fields we need to avoid Pydantic validation errors
+                    return SnipeITAsset(
+                        id=row["id"],
+                        asset_tag=row.get("asset_tag", ""),
+                        name=row.get("name"),
+                        last_checkout=row.get("last_checkout"),
+                        last_checkin=row.get("last_checkin"),
+                        expected_checkin=row.get("expected_checkin")
+                    )
         
         return None
     except Exception:
@@ -104,12 +119,20 @@ def create_model(
         payload["purchase_cost"] = str(price)
     
     response = client.post("/api/v1/models", json_data=payload)
-    if response and "id" in response:
-        return SnipeITModel(
-            id=response["id"],
-            name=name,
-            model_number=model_number
-        )
+    if response:
+        # Handle both response formats: {"id": X} and {"payload": {"id": X}}
+        model_id = None
+        if "payload" in response and isinstance(response["payload"], dict):
+            model_id = response["payload"].get("id")
+        elif "id" in response:
+            model_id = response["id"]
+        
+        if model_id:
+            return SnipeITModel(
+                id=model_id,
+                name=name,
+                model_number=model_number
+            )
     
     return None
 
@@ -215,23 +238,49 @@ def update_asset(
     return None
 
 
+def _strip_whitespace_and_junk(name: str) -> str:
+    """Common cleanup: strip whitespace, literal escape sequences, and trailing symbols."""
+    normalized = name.strip()
+    # Remove actual CR/LF characters
+    normalized = normalized.replace('\r', '').replace('\n', '')
+    # Remove literal \r\n strings (escaped backslash-r-backslash-n from dump)
+    normalized = normalized.replace('\\r', '').replace('\\n', '')
+    # Remove trailing special characters like -, *, etc.
+    normalized = normalized.rstrip('-*').strip()
+    return normalized
+
+
+def _normalize_for_comparison(name: str) -> str:
+    """Normalize name for accent-insensitive, case-insensitive comparison.
+    
+    Snipe-IT uses MySQL which by default has accent-insensitive collation,
+    so 'Câmera' and 'Camera' are considered the same name. Python string
+    comparison is accent-sensitive, so we must fold accents for matching.
+    """
+    if not name:
+        return ""
+    # NFC normalize first for consistent representation
+    name = unicodedata.normalize('NFC', name)
+    # Decompose to NFKD to separate base chars from combining marks (accents)
+    nfkd = unicodedata.normalize('NFKD', name)
+    # Strip combining characters (accent marks)
+    stripped = ''.join(c for c in nfkd if not unicodedata.combining(c))
+    return stripped.lower().strip()
+
+
 def normalize_category_name(name: str) -> str:
     """Normalize category name by stripping whitespace and handling common variations."""
     if not name:
         return "Uncategorized"
     
-    # Strip all whitespace including newlines and carriage returns
-    normalized = name.strip()
-    # Remove any remaining \r or \n characters (actual characters)
-    normalized = normalized.replace('\r', '').replace('\n', '')
-    # Also remove literal \r\n strings (escaped backslash-r-backslash-n)
-    normalized = normalized.replace('\\r', '').replace('\\n', '')
-    # Remove trailing special characters like -, *, etc.
-    normalized = normalized.rstrip('-*').strip()
+    normalized = _strip_whitespace_and_junk(name)
     
     # Handle empty after stripping
     if not normalized:
         return "Uncategorized"
+    
+    # NFC normalize for consistent Unicode representation
+    normalized = unicodedata.normalize('NFC', normalized)
     
     # Capitalize first letter
     normalized = normalized[0].upper() + normalized[1:] if len(normalized) > 1 else normalized.upper()
@@ -244,42 +293,90 @@ def normalize_manufacturer_name(name: str) -> str:
     if not name:
         return "Unknown"
     
-    # Strip all whitespace including newlines and carriage returns
-    normalized = name.strip()
-    # Remove any remaining \r or \n characters (actual characters)
-    normalized = normalized.replace('\r', '').replace('\n', '')
-    # Also remove literal \r\n strings (escaped backslash-r-backslash-n)
-    normalized = normalized.replace('\\r', '').replace('\\n', '')
-    # Remove trailing special characters like -, *, etc.
-    normalized = normalized.rstrip('-*').strip()
+    normalized = _strip_whitespace_and_junk(name)
     
     # Handle empty after stripping
     if not normalized:
         return "Unknown"
     
+    # NFC normalize for consistent Unicode representation
+    normalized = unicodedata.normalize('NFC', normalized)
+    
     # Capitalize first letter
     normalized = normalized[0].upper() + normalized[1:] if len(normalized) > 1 else normalized.upper()
     
-    # Handle common variations
+    # Handle common variations (exact match, case-insensitive)
     variations = {
+        # Farnell
         "Farnell": "Farnell",
+        # Digi-Key variants
         "Digikey": "Digi-Key",
+        "DigiKey": "Digi-Key",
         "Digi Key": "Digi-Key",
+        "Digi-Key": "Digi-Key",
+        "DIGI-KEY": "Digi-Key",
+        # Esite
         "Esite": "Esite",
         "ESITE": "Esite",
+        # BeeVeryCreative variants
         "Beeverycreative": "BeeVeryCreative",
         "BeeVeryCreative": "BeeVeryCreative",
+        "BeeVery Creative": "BeeVeryCreative",
+        # Mouser variants
         "Mouser": "Mouser",
         "Mauser": "Mouser",
         "Robert Mauser": "Mouser",
-        "SAR": "SAR",
+        # PT Robotics variants
+        "PT Robotics": "PT Robotics",
+        "PTRobotics": "PT Robotics",
+        "Pt Robotics": "PT Robotics",
+        # RS Amidata variants
+        "RS-Amidata": "RS Amidata",
+        "RS Amidata": "RS Amidata",
+        # Jovitrónica variants
+        "Jovitrónica": "Jovitrónica",
+        "Jovitronica": "Jovitrónica",
+        "Jovitrónica/RS": "Jovitrónica",
+        "Jovitronica/RS": "Jovitrónica",
+        # Mixtronica
+        "Mixtrónica": "Mixtrónica",
+        "Mixtronica": "Mixtrónica",
+        # IT Oferta variants
+        "IT Oferta": "IT Oferta",
+        "Oferta IT": "IT Oferta",
+        # DETI
+        "DETI": "DETI",
+        "Deti": "DETI",
+        # DETI/Bosch
+        "DETI/Bosch": "DETI/Bosch",
+        "Deti/Bosch": "DETI/Bosch",
+        # N/A → Unknown
+        "N/A": "Unknown",
+        "n/a": "Unknown",
+        "NA": "Unknown",
+        "-": "Unknown",
+        # BotNRoll
+        "BotNRoll": "BotNRoll",
+        "Botnroll": "BotNRoll",
+        "BotnRoll": "BotNRoll",
+        # Electropositivo/SAR
+        "Electropositivo/SAR": "Electropositivo",
     }
     
-    # Case-insensitive lookup
+    # Case-insensitive exact lookup
     lower_normalized = normalized.lower()
     for key, value in variations.items():
         if key.lower() == lower_normalized:
             return value
+    
+    # Prefix-based mapping for known manufacturer families
+    # SAR has many name variants (with/without "de", accent variations, underscores, etc.)
+    prefix_mappings = {
+        "sar": "SAR",
+    }
+    for prefix, canonical in prefix_mappings.items():
+        if lower_normalized.startswith(prefix):
+            return canonical
     
     return normalized
 
@@ -321,6 +418,53 @@ def cleanup_categories_and_manufacturers(client: DryRunSnipeITClient) -> None:
         pass  # Ignore cleanup errors
 
 
+def _search_entity_by_name(client: DryRunSnipeITClient, endpoint: str, normalized_name: str, limit: int = 50) -> Optional[int]:
+    """Search for an entity (category/manufacturer) by name using accent-insensitive comparison.
+    
+    Returns the entity ID if found, None otherwise.
+    """
+    try:
+        response = client.get(endpoint, params={"search": normalized_name, "limit": limit})
+        if "rows" in response:
+            comparison_key = _normalize_for_comparison(normalized_name)
+            for row in response["rows"]:
+                existing_name = row.get("name", "")
+                if isinstance(existing_name, str) and _normalize_for_comparison(existing_name) == comparison_key:
+                    return row["id"]
+    except Exception:
+        pass
+    return None
+
+
+def _full_scan_entity_by_name(client: DryRunSnipeITClient, endpoint: str, normalized_name: str) -> Optional[int]:
+    """Full paginated scan as a last resort to find an entity by name.
+    
+    The search endpoint might miss results due to fuzzy matching or pagination.
+    This fetches all entities and does an accent-insensitive comparison.
+    """
+    try:
+        comparison_key = _normalize_for_comparison(normalized_name)
+        offset = 0
+        page_size = 100
+        while True:
+            response = client.get(endpoint, params={"limit": page_size, "offset": offset})
+            rows = response.get("rows", [])
+            if not rows:
+                break
+            for row in rows:
+                existing_name = row.get("name", "")
+                if isinstance(existing_name, str) and _normalize_for_comparison(existing_name) == comparison_key:
+                    return row["id"]
+            # Stop if we've fetched all
+            total = response.get("total", 0)
+            offset += page_size
+            if offset >= total:
+                break
+    except Exception:
+        pass
+    return None
+
+
 def find_or_create_category(
     client: DryRunSnipeITClient,
     name: str,
@@ -329,25 +473,22 @@ def find_or_create_category(
     """Find a category by name or create a new one in Snipe-IT. Returns category ID."""
     normalized_name = normalize_category_name(name)
     
-    # Check cache first
+    # Check cache first (only successful lookups are cached)
     if normalized_name in _category_cache:
         return _category_cache[normalized_name]
     
-    # Try to find existing category
-    try:
-        response = client.get("/api/v1/categories", params={"search": normalized_name, "limit": 10})
-        
-        if "rows" in response:
-            for row in response["rows"]:
-                # Normalize the existing category name for comparison
-                existing_name = normalize_category_name(row.get("name", ""))
-                if existing_name == normalized_name:
-                    _category_cache[normalized_name] = row["id"]
-                    return row["id"]
-    except Exception as e:
-        # Log but continue to create if lookup fails
-        if client.logger:
-            client.logger.warning(f"Category lookup failed for '{normalized_name}': {str(e)}")
+    # Also check cache with accent-folded key (handles 'Câmera' vs 'Camera')
+    comparison_key = _normalize_for_comparison(normalized_name)
+    for cached_name, cached_id in _category_cache.items():
+        if cached_id is not None and _normalize_for_comparison(cached_name) == comparison_key:
+            _category_cache[normalized_name] = cached_id
+            return cached_id
+    
+    # Try to find existing category via search API
+    found_id = _search_entity_by_name(client, "/api/v1/categories", normalized_name)
+    if found_id:
+        _category_cache[normalized_name] = found_id
+        return found_id
     
     # Create new category
     payload = {
@@ -367,27 +508,19 @@ def find_or_create_category(
             if client.logger:
                 client.logger.error(f"Category creation failed for '{normalized_name}': No ID in response: {response}")
     except Exception as e:
-        # If creation failed due to "already exists", retry lookup
+        # If creation failed due to "already exists", do a full scan as last resort
         error_str = str(e).lower()
         if "already been taken" in error_str or "must be unique" in error_str:
             if client.logger:
-                client.logger.info(f"Category '{normalized_name}' already exists, retrying lookup")
-            try:
-                response = client.get("/api/v1/categories", params={"search": normalized_name, "limit": 10})
-                if "rows" in response:
-                    for row in response["rows"]:
-                        # Normalize the existing category name for comparison
-                        existing_name = normalize_category_name(row.get("name", ""))
-                        if existing_name == normalized_name:
-                            _category_cache[normalized_name] = row["id"]
-                            return row["id"]
-            except Exception:
-                pass
+                client.logger.info(f"Category '{normalized_name}' already exists, doing full scan lookup")
+            found_id = _full_scan_entity_by_name(client, "/api/v1/categories", normalized_name)
+            if found_id:
+                _category_cache[normalized_name] = found_id
+                return found_id
         if client.logger:
             client.logger.error(f"Category creation failed for '{normalized_name}': {str(e)}")
     
-    # Cache the failure to avoid repeated attempts
-    _category_cache[normalized_name] = None
+    # Do NOT cache failures — a transient error shouldn't block all subsequent items
     return None
 
 
@@ -398,25 +531,22 @@ def find_or_create_manufacturer(
     """Find a manufacturer by name or create a new one in Snipe-IT. Returns manufacturer ID."""
     normalized_name = normalize_manufacturer_name(name)
     
-    # Check cache first
+    # Check cache first (only successful lookups are cached)
     if normalized_name in _manufacturer_cache:
         return _manufacturer_cache[normalized_name]
     
-    # Try to find existing manufacturer
-    try:
-        response = client.get("/api/v1/manufacturers", params={"search": normalized_name, "limit": 10})
-        
-        if "rows" in response:
-            for row in response["rows"]:
-                # Normalize the existing manufacturer name for comparison
-                existing_name = normalize_manufacturer_name(row.get("name", ""))
-                if existing_name == normalized_name:
-                    _manufacturer_cache[normalized_name] = row["id"]
-                    return row["id"]
-    except Exception as e:
-        # Log but continue to create if lookup fails
-        if client.logger:
-            client.logger.warning(f"Manufacturer lookup failed for '{normalized_name}': {str(e)}")
+    # Also check cache with accent-folded key
+    comparison_key = _normalize_for_comparison(normalized_name)
+    for cached_name, cached_id in _manufacturer_cache.items():
+        if cached_id is not None and _normalize_for_comparison(cached_name) == comparison_key:
+            _manufacturer_cache[normalized_name] = cached_id
+            return cached_id
+    
+    # Try to find existing manufacturer via search API
+    found_id = _search_entity_by_name(client, "/api/v1/manufacturers", normalized_name)
+    if found_id:
+        _manufacturer_cache[normalized_name] = found_id
+        return found_id
     
     # Create new manufacturer
     payload = {
@@ -435,25 +565,17 @@ def find_or_create_manufacturer(
             if client.logger:
                 client.logger.error(f"Manufacturer creation failed for '{normalized_name}': No ID in response: {response}")
     except Exception as e:
-        # If creation failed due to "already exists", retry lookup
+        # If creation failed due to "already exists", do a full scan as last resort
         error_str = str(e).lower()
         if "already been taken" in error_str or "must be unique" in error_str:
             if client.logger:
-                client.logger.info(f"Manufacturer '{normalized_name}' already exists, retrying lookup")
-            try:
-                response = client.get("/api/v1/manufacturers", params={"search": normalized_name, "limit": 10})
-                if "rows" in response:
-                    for row in response["rows"]:
-                        # Normalize the existing manufacturer name for comparison
-                        existing_name = normalize_manufacturer_name(row.get("name", ""))
-                        if existing_name == normalized_name:
-                            _manufacturer_cache[normalized_name] = row["id"]
-                            return row["id"]
-            except Exception:
-                pass
+                client.logger.info(f"Manufacturer '{normalized_name}' already exists, doing full scan lookup")
+            found_id = _full_scan_entity_by_name(client, "/api/v1/manufacturers", normalized_name)
+            if found_id:
+                _manufacturer_cache[normalized_name] = found_id
+                return found_id
         if client.logger:
             client.logger.error(f"Manufacturer creation failed for '{normalized_name}': {str(e)}")
     
-    # Cache the failure to avoid repeated attempts
-    _manufacturer_cache[normalized_name] = None
+    # Do NOT cache failures — a transient error shouldn't block all subsequent items
     return None

@@ -92,6 +92,12 @@ def parse_project_xml(content: str) -> Dict[str, Any]:
 
 def parse_equipment_markdown(content: str) -> Dict[str, Any]:
     """Parse equipment markdown-like content to extract fields."""
+    # Normalize literal \r\n escape sequences from PostgreSQL COPY format to actual newlines.
+    # The dump stores \r\n as literal 4-char text sequences (backslash+r+backslash+n),
+    # not as actual CR/LF bytes. Converting them here lets the existing regex patterns
+    # (which use (?=\r?\n) lookaheads) work correctly.
+    content = content.replace('\\r\\n', '\n').replace('\\r', '').replace('\\n', '\n')
+
     result = {
         "family": None,
         "sub_family": None,
