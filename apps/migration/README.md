@@ -22,7 +22,7 @@ pip install -r requirements.txt
 Set the following environment variables:
 
 ```bash
-export POSTGRES_URI="postgresql://user:pass@host:port/dbname"
+export POSTGRES_URL="postgresql://user:pass@host:port/dbname"
 export SNIPEIT_BASE_URL="https://snipeit.example.com"
 export SNIPEIT_API_TOKEN="your-api-token"
 export MIGRATION_BATCH_SIZE="100"  # Optional, default 100
@@ -106,23 +106,13 @@ The migration automatically adds the following columns via schema bootstrap:
 - **Equipment with empty Código**: Logged as warnings and skipped
 - **Project membership**: XML `<owner>` → `"leader"`, `<member>` → `"member"`, `<mentor>` → `"advisor"`
 
-## Snipe-IT Configuration
+## Docker Environment Notice
 
-Configure category and manufacturer mappings in environment or settings:
+**CRITICAL**: If you are testing the migration module alongside the Docker infrastructure (e.g. running `docker-compose down -v` followed by `docker-compose up -d`), be aware of the following Docker trap:
 
-```python
-SNIPEIT_CATEGORY_MAP = {
-    "Memória": 1,
-    "Placa Expansão": 2,
-    # ...
-}
-
-SNIPEIT_MANUFACTURER_MAP = {
-    "Farnell": 1,
-    "Esite": 2,
-    # ...
-}
-```
+1. When `docker-compose up -d` runs, the `makerlab-api` container starts and caches the environment variables from `apps/api/.env`.
+2. When you initialize Snipe-IT and generate a **new** API token, you must paste it into both `apps/api/.env` and `apps/migration/.env`.
+3. **You must restart the API container** for it to pick up the new token! Run `docker-compose up -d` again (or `docker restart makerlab-api`). If you skip this, the migration script will succeed (since it runs natively and reads `.env` directly), but the website will silently fail to authenticate with Snipe-IT because the API container is still using the old token.
 
 ## Testing Strategy
 

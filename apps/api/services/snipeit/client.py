@@ -44,7 +44,13 @@ class SnipeITClient:
         session.headers.update({
             "Authorization": f"Bearer {self.token}",
             "Accept": "application/json",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            # Snipe-IT has APP_FORCE_TLS=true, so internal HTTP calls get
+            # redirected to HTTPS.  Sending these headers makes Snipe-IT
+            # treat the request as if it arrived through the TLS-terminating
+            # reverse proxy, which prevents the redirect.
+            "X-Forwarded-Proto": "https",
+            "X-Forwarded-For": "127.0.0.1",
         })
         return session
         

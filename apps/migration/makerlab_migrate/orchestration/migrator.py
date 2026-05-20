@@ -207,6 +207,7 @@ class MigrationOrchestrator:
                             user_id=legacy_user.id
                         )
                         self.stats["users"]["errors"] += 1
+                        session.rollback()
 
             # Save checkpoint if incremental and not dry-run
             if self.incremental and not self.dry_run and users:
@@ -325,6 +326,7 @@ class MigrationOrchestrator:
                             project_id=legacy_project.id
                         )
                         self.stats["projects"]["errors"] += 1
+                        session.rollback()
 
             # Save checkpoint if incremental and not dry-run
             if self.incremental and not self.dry_run and projects:
@@ -580,6 +582,7 @@ class MigrationOrchestrator:
                             f"Failed to migrate equipment with código {codigo}: {str(e)}"
                         )
                         self.stats["equipment_models"]["errors"] += 1
+                        session.rollback()
 
             # Save checkpoint if incremental and not dry-run
             if self.incremental and not self.dry_run and equipment_list:

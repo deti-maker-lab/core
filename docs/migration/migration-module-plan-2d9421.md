@@ -295,9 +295,9 @@ else:
 ### 4) Migration loop: Equipment Models + Assets (Postgres + Snipe-IT)
 
 ```python
-# PRE-REQUISITE: Snipe-IT category and manufacturer mappings must be configured
-# Snipe-IT requires category_id and manufacturer_id when creating models.
-# Create mappings: family→category_id, supplier→manufacturer_id
+# Dynamic Creation: Snipe-IT category and manufacturer are dynamically 
+# resolved or created on the fly if they do not exist.
+# Mappings: family → category, supplier → manufacturer
 
 # PHASE 1: Deduplicate equipment by Código to create unique EquipmentModels
 # Multiple wiki revisions share the same Código (e.g., different color filaments with same SKU)
@@ -331,14 +331,9 @@ for codigo, equipment_group in model_signatures.items():
     # lookup by model_number (which stores the Código/SKU)
     s_model = snipe.find_model(model_number=codigo)
     if not s_model:
-        # Requires: category_id (from family mapping), manufacturer_id (from supplier mapping)
-        # Fallback to "Uncategorized" (ID 1) or "Other" if family not mapped
-        category_id = settings.SNIPEIT_CATEGORY_MAP.get(template.family, settings.SNIPEIT_DEFAULT_CATEGORY_ID)
-        manufacturer_id = settings.SNIPEIT_MANUFACTURER_MAP.get(template.supplier, settings.SNIPEIT_DEFAULT_MANUFACTURER_ID)
-        
-        if not category_id:
-            logger.warning(f"No category mapping for family '{template.family}', using default")
-            category_id = settings.SNIPEIT_DEFAULT_CATEGORY_ID
+        # Dynamically lookup or create category and manufacturer in Snipe-IT
+        category_id = snipe.find_or_create_category(template.family)
+        manufacturer_id = snipe.find_or_create_manufacturer(template.supplier)
         
         s_model = snipe.create_model(payload_from_equipment_model(
             model, 
@@ -426,37 +421,16 @@ else:
 Add to `settings.py` or environment:
 
 ```python
-# Required for creating models in Snipe-IT
-SNIPEIT_CATEGORY_MAP: dict[str, int] = {
-    "Memória": 1,
-    "Placa Expansão": 2,
-    "Consumiveis 3D": 3,
-    "Microcomputador": 4,
-    # ... map all families to existing Snipe-IT category IDs
-}
-
-SNIPEIT_MANUFACTURER_MAP: dict[str, int] = {
-    "Farnell": 1,
-    "Esite": 2,
-    "BeeVery Creative": 3,
-    # ... map suppliers to existing Snipe-IT manufacturer IDs
-}
-
-# Fallback IDs (must exist in Snipe-IT)
-SNIPEIT_DEFAULT_CATEGORY_ID: int = 1  # "Uncategorized"
-SNIPEIT_DEFAULT_MANUFACTURER_ID: int = 1  # "Unknown" or create one
-
 # Rate limiting (milliseconds between API calls)
 SNIPEIT_API_DELAY_MS: int = 100
 ```
 
-**Pre-flight Checklist**:
-- [ ] Categories exist in Snipe-IT or defaults are valid IDs
-- [ ] Manufacturers exist in Snipe-IT or defaults are valid IDs
-- [ ] API token has permission to create models, assets, and users
-- [ ] Snipe-IT instance is reachable and not in maintenance mode
+**Dynamic Entity Creation**: 
+The migration module automatically queries the Snipe-IT API for Categories and Manufacturers based on the legacy database's `family` and `supplier` fields. If they are not found, the module creates them on the fly. You **do not** need to pre-create or manually map Categories or Manufacturers.
 
-**Note**: If categories/manufacturers don't exist in Snipe-IT, pre-create them via Snipe-IT web UI or API before migration.
+**Pre-flight Checklist**:
+- [ ] API token has permission to read and create categories, manufacturers, models, assets, and users
+- [ ] Snipe-IT instance is reachable and not in maintenance mode
 
 ## Open Decisions (captured for implementation)
 
