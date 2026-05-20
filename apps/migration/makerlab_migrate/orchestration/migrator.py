@@ -31,9 +31,11 @@ from makerlab_migrate.snipeit.upsert import (
     update_asset,
     find_or_create_category,
     find_or_create_manufacturer,
-    cleanup_categories_and_manufacturers,
+    cleanup_categories_manufacturers_and_locations,
     normalize_category_name,
-    normalize_manufacturer_name
+    normalize_manufacturer_name,
+    normalize_location_name,
+    find_or_create_location
 )
 from ..settings import MigrationSettings
 from ..logging import MigrationLogger
@@ -456,12 +458,11 @@ class MigrationOrchestrator:
                                     # Find or create asset in Snipe-IT
                                     snipeit_asset = find_asset_by_asset_tag(self.snipeit, asset_tag)
                                     
-                                    # Normalize location (strip \r\n* like we do for category names)
-                                    normalized_location = None
-                                    if legacy_eq.location:
-                                        normalized_location = legacy_eq.location.strip().strip('\r\n').strip().rstrip('-*').strip().replace('\r', '').replace('\n', '').replace('\\r', '').replace('\\n', '')
-                                        if not normalized_location:
-                                            normalized_location = None
+                                    # Normalize location and get Snipe-IT location ID
+                                    location_id = None
+                                    normalized_location = normalize_location_name(legacy_eq.location) if legacy_eq.location else None
+                                    if normalized_location:
+                                        location_id = find_or_create_location(self.snipeit, normalized_location)
                                     
                                     asset_price = float(template.price) if template.price else None
                                     
@@ -471,7 +472,7 @@ class MigrationOrchestrator:
                                             model_id=snipeit_model.id,
                                             asset_tag=asset_tag,
                                             name=legacy_eq.title,
-                                            location=normalized_location,
+                                            location_id=location_id,
                                             price=asset_price
                                         )
                                     else:
@@ -479,7 +480,7 @@ class MigrationOrchestrator:
                                         update_asset(
                                             self.snipeit,
                                             snipeit_asset.id,
-                                            location=normalized_location,
+                                            location_id=location_id,
                                             price=asset_price
                                         )
 
@@ -566,7 +567,7 @@ class MigrationOrchestrator:
                                     legacy_id=legacy_eq.article_id,
                                     model_id=model.id,
                                     snipeit_asset_id=snipeit_asset_id,
-                                    location=legacy_eq.location,
+                                    location=normalized_location,
                                     status="available"  # Default to available
                                 )
 

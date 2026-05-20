@@ -58,19 +58,29 @@ def find_or_create_user(
 def find_model_by_model_number(client: DryRunSnipeITClient, model_number: str) -> Optional[SnipeITModel]:
     """Find a Snipe-IT model by model number."""
     try:
-        response = client.get("/api/v1/models", params={"search": model_number, "limit": 50})
+        limit = 100
+        offset = 0
         
-        if "rows" in response:
+        while True:
+            response = client.get("/api/v1/models", params={"search": model_number, "limit": limit, "offset": offset})
+            
+            if "rows" not in response or not response["rows"]:
+                break
+                
             for row in response["rows"]:
                 if row.get("model_number", "").lower() == model_number.lower():
                     # Extract only the fields we need to avoid Pydantic validation errors
-                    # from unexpected extra fields in the API response
                     return SnipeITModel(
                         id=row["id"],
                         name=row.get("name", ""),
                         model_number=row.get("model_number")
                     )
-        
+            
+            total = response.get("total", 0)
+            offset += limit
+            if offset >= total:
+                break
+                
         return None
     except Exception:
         return None
@@ -79,20 +89,18 @@ def find_model_by_model_number(client: DryRunSnipeITClient, model_number: str) -
 def find_asset_by_asset_tag(client: DryRunSnipeITClient, asset_tag: str) -> Optional[SnipeITAsset]:
     """Find a Snipe-IT asset by asset tag."""
     try:
-        response = client.get("/api/v1/hardware", params={"search": asset_tag, "limit": 50})
+        # Use bytag endpoint for exact match
+        response = client.get(f"/api/v1/hardware/bytag/{asset_tag}")
         
-        if "rows" in response:
-            for row in response["rows"]:
-                if row.get("asset_tag", "").lower() == asset_tag.lower():
-                    # Extract only the fields we need to avoid Pydantic validation errors
-                    return SnipeITAsset(
-                        id=row["id"],
-                        asset_tag=row.get("asset_tag", ""),
-                        name=row.get("name"),
-                        last_checkout=row.get("last_checkout"),
-                        last_checkin=row.get("last_checkin"),
-                        expected_checkin=row.get("expected_checkin")
-                    )
+        if response and "id" in response:
+            return SnipeITAsset(
+                id=response["id"],
+                asset_tag=response.get("asset_tag", ""),
+                name=response.get("name"),
+                last_checkout=response.get("last_checkout"),
+                last_checkin=response.get("last_checkin"),
+                expected_checkin=response.get("expected_checkin")
+            )
         
         return None
     except Exception:
@@ -173,7 +181,7 @@ def create_asset(
     model_id: int,
     asset_tag: str,
     name: Optional[str] = None,
-    location: Optional[str] = None,
+    location_id: Optional[int] = None,
     price: Optional[float] = None
 ) -> Optional[SnipeITAsset]:
     """Create a new asset in Snipe-IT."""
@@ -186,8 +194,8 @@ def create_asset(
     if name:
         payload["name"] = name
     
-    if location:
-        payload["location"] = location
+    if location_id:
+        payload["rtd_location_id"] = location_id
     
     if price is not None:
         payload["purchase_cost"] = str(price)
@@ -209,14 +217,14 @@ def create_asset(
 def update_asset(
     client: DryRunSnipeITClient,
     asset_id: int,
-    location: Optional[str] = None,
+    location_id: Optional[int] = None,
     price: Optional[float] = None
 ) -> Optional[SnipeITAsset]:
     """Update an existing asset in Snipe-IT."""
     payload = {}
     
-    if location:
-        payload["location"] = location
+    if location_id:
+        payload["rtd_location_id"] = location_id
     
     if price is not None:
         payload["purchase_cost"] = str(price)
@@ -384,10 +392,11 @@ def normalize_manufacturer_name(name: str) -> str:
 # Simple in-memory caches for categories and manufacturers to avoid repeated API calls
 _category_cache: Dict[str, Optional[int]] = {}
 _manufacturer_cache: Dict[str, Optional[int]] = {}
+_location_cache: Dict[str, Optional[int]] = {}
 
 
-def cleanup_categories_and_manufacturers(client: DryRunSnipeITClient) -> None:
-    """Delete all categories (except default) and manufacturers to ensure clean migration."""
+def cleanup_categories_manufacturers_and_locations(client: DryRunSnipeITClient) -> None:
+    """Delete all categories (except default), manufacturers and locations to ensure clean migration."""
     if client.dry_run:
         return
     
@@ -410,10 +419,20 @@ def cleanup_categories_and_manufacturers(client: DryRunSnipeITClient) -> None:
                     client.delete(f"/api/v1/manufacturers/{manufacturer['id']}")
                 except Exception:
                     pass  # Ignore deletion errors
+                    
+        # Delete all locations
+        response = client.get("/api/v1/locations")
+        if "rows" in response:
+            for location in response["rows"]:
+                try:
+                    client.delete(f"/api/v1/locations/{location['id']}")
+                except Exception:
+                    pass  # Ignore deletion errors
         
         # Clear caches
         _category_cache.clear()
         _manufacturer_cache.clear()
+        _location_cache.clear()
     except Exception:
         pass  # Ignore cleanup errors
 
@@ -578,4 +597,85 @@ def find_or_create_manufacturer(
             client.logger.error(f"Manufacturer creation failed for '{normalized_name}': {str(e)}")
     
     # Do NOT cache failures — a transient error shouldn't block all subsequent items
+    return None
+
+
+def normalize_location_name(name: str) -> Optional[str]:
+    """Normalize location name by stripping whitespace and handling common variations. Returns None if it is missing or N/A."""
+    if not name:
+        return None
+    
+    normalized = _strip_whitespace_and_junk(name)
+    
+    if not normalized:
+        return None
+    
+    # NFC normalize for consistent Unicode representation
+    normalized = unicodedata.normalize('NFC', normalized)
+    
+    # Handle common variations of N/A
+    lower_normalized = normalized.lower()
+    if lower_normalized in ["n/a", "na", "n.a.", "-", "none", "unknown", "xxxx", "xxxxx"]:
+        return None
+        
+    # Capitalize first letter
+    normalized = normalized[0].upper() + normalized[1:] if len(normalized) > 1 else normalized.upper()
+    
+    return normalized
+
+
+def find_or_create_location(
+    client: DryRunSnipeITClient,
+    name: str
+) -> Optional[int]:
+    """Find a location by name or create a new one in Snipe-IT. Returns location ID."""
+    normalized_name = normalize_location_name(name)
+    if not normalized_name:
+        return None
+        
+    # Check cache first
+    if normalized_name in _location_cache:
+        return _location_cache[normalized_name]
+    
+    # Also check cache with accent-folded key
+    comparison_key = _normalize_for_comparison(normalized_name)
+    for cached_name, cached_id in _location_cache.items():
+        if cached_id is not None and _normalize_for_comparison(cached_name) == comparison_key:
+            _location_cache[normalized_name] = cached_id
+            return cached_id
+            
+    # Try to find existing location via search API
+    found_id = _search_entity_by_name(client, "/api/v1/locations", normalized_name)
+    if found_id:
+        _location_cache[normalized_name] = found_id
+        return found_id
+        
+    # Create new location
+    payload = {
+        "name": normalized_name,
+    }
+    
+    try:
+        response = client.post("/api/v1/locations", json_data=payload)
+        if response and "payload" in response and "id" in response["payload"]:
+            _location_cache[normalized_name] = response["payload"]["id"]
+            return response["payload"]["id"]
+        elif response and "id" in response:
+            _location_cache[normalized_name] = response["id"]
+            return response["id"]
+        else:
+            if client.logger:
+                client.logger.error(f"Location creation failed for '{normalized_name}': No ID in response: {response}")
+    except Exception as e:
+        error_str = str(e).lower()
+        if "already been taken" in error_str or "must be unique" in error_str:
+            if client.logger:
+                client.logger.info(f"Location '{normalized_name}' already exists, doing full scan lookup")
+            found_id = _full_scan_entity_by_name(client, "/api/v1/locations", normalized_name)
+            if found_id:
+                _location_cache[normalized_name] = found_id
+                return found_id
+        if client.logger:
+            client.logger.error(f"Location creation failed for '{normalized_name}': {str(e)}")
+            
     return None
