@@ -21,11 +21,7 @@ class MigrationSettings(BaseSettings):
     snipeit_token: str = Field(default="")
     snipeit_timeout_seconds: int = 10
     
-    # Snipe-IT category and manufacturer mappings
-    snipeit_category_map: Dict[str, int] = {}
-    snipeit_manufacturer_map: Dict[str, int] = {}
-    snipeit_default_category_id: int = 1
-    snipeit_default_manufacturer_id: int = 1
+
     
     # Rate limiting
     snipeit_api_delay_ms: int = 100
@@ -52,16 +48,7 @@ class MigrationSettings(BaseSettings):
             load_dotenv(env_path, override=True)
             print(f"Loaded .env from: {env_path}")
         
-        # Parse category and manufacturer maps from JSON strings
-        category_map_str = os.getenv("SNIPEIT_CATEGORY_MAP", "{}")
-        manufacturer_map_str = os.getenv("SNIPEIT_MANUFACTURER_MAP", "{}")
-        
-        try:
-            category_map = json.loads(category_map_str)
-            manufacturer_map = json.loads(manufacturer_map_str)
-        except json.JSONDecodeError:
-            category_map = {}
-            manufacturer_map = {}
+
         
         return cls(
             dump_path=Path(dump_path),
@@ -70,11 +57,7 @@ class MigrationSettings(BaseSettings):
             snipeit_token=os.getenv("SNIPEIT_API_TOKEN", ""),
             snipeit_timeout_seconds=int(os.getenv("SNIPEIT_TIMEOUT_SECONDS", "10")),
             snipeit_api_delay_ms=int(os.getenv("SNIPEIT_API_DELAY_MS", "100")),
-            batch_size=int(os.getenv("MIGRATION_BATCH_SIZE", "100")),
-            snipeit_category_map=category_map,
-            snipeit_manufacturer_map=manufacturer_map,
-            snipeit_default_category_id=int(os.getenv("SNIPEIT_DEFAULT_CATEGORY_ID", "1")),
-            snipeit_default_manufacturer_id=int(os.getenv("SNIPEIT_DEFAULT_MANUFACTURER_ID", "1"))
+            batch_size=int(os.getenv("MIGRATION_BATCH_SIZE", "100"))
         )
     
     def validate(self, skip_snipeit: bool = False, skip_db_validation: bool = False) -> list[str]:

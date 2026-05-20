@@ -171,14 +171,30 @@ def upsert_equipment_model(
     Upsert an equipment model by legacy_id.
     Returns (model, action) where action is 'INSERT' or 'UPDATE'.
     """
+    # Try to find by legacy_id first
     result = session.execute(
         select(EquipmentModel).where(EquipmentModel.legacy_id == legacy_id)
     )
     model = result.scalars().first()
     
+    # Fallback: check by snipeit_model_id to avoid unique constraint violations
+    if not model and snipeit_model_id is not None:
+        result = session.execute(
+            select(EquipmentModel).where(EquipmentModel.snipeit_model_id == snipeit_model_id)
+        )
+        model = result.scalars().first()
+    
+    # Fallback: check by reference_code
+    if not model and reference_code is not None:
+        result = session.execute(
+            select(EquipmentModel).where(EquipmentModel.reference_code == reference_code)
+        )
+        model = result.scalars().first()
+    
     if model:
         # Update existing model
         model.name = name
+        model.legacy_id = legacy_id  # Ensure legacy_id is always set/updated
         if reference_code is not None:
             model.reference_code = reference_code
         if legacy_reference_code is not None:
